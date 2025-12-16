@@ -46,6 +46,8 @@ public class VerificationSession {
             this.inventory.onClick(this::handleInventoryClick);
             setupSession();
         } else {
+            // Initialize session data even in fallback mode
+            pickTargetItem();
             // Start fallback immediately
             fallbackVerification();
         }

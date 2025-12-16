@@ -104,7 +104,8 @@ public class LanguageManager {
     public Component getMessage(String path, Map<String, String> placeholders) {
         String raw = getRawMessage(path);
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            raw = raw.replace("%" + entry.getKey() + "%", entry.getValue());
+            String value = entry.getValue() != null ? entry.getValue() : "";
+            raw = raw.replace("%" + entry.getKey() + "%", value);
         }
         return net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(raw);
     }
