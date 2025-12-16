@@ -16,7 +16,19 @@ public class LimboFilter implements LimboSessionHandler {
 
     public void onSpawn(LimboPlayer limboPlayer) {
         // Player joined Limbo. Open the GUI.
-        plugin.getVerificationManager().startVerification(player);
+        plugin.getLogger().info("Player " + player.getUsername() + " spawned in Limbo!");
+        
+        // Send welcome message first
+        player.sendMessage(plugin.getLanguageManager().getMessage("verification.welcome"));
+        
+        // Start verification after a short delay to ensure connection is stable
+        plugin.getServer().getScheduler()
+            .buildTask(plugin, () -> {
+                plugin.getLogger().info("Starting verification for " + player.getUsername());
+                plugin.getVerificationManager().startVerification(player);
+            })
+            .delay(java.time.Duration.ofSeconds(1))
+            .schedule();
     }
     
     // We can handle other events here if needed, or rely on Velocity events/packets.
