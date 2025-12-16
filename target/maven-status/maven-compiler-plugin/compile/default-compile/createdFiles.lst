@@ -8,4 +8,5 @@ com\melut\nomorebots\verification\VerificationSession.class
 com\melut\nomorebots\database\DatabaseManager.class
 com\melut\nomorebots\events\PlayerConnectionHandler.class
 com\melut\nomorebots\database\PlayerData.class
+com\melut\nomorebots\verification\VerificationSession$VerificationStage.class
 com\melut\nomorebots\limbo\LimboFilter.class

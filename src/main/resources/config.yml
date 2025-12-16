@@ -29,43 +29,21 @@ limbo:
   max-players: 100
   brand-name: "&6NoMoreBots &7Verification"
   
-# Bot Doğrulama Sistemi
+# Bot Doğrulama Sistemi (Chat + Movement Hibrit)
 verification:
   enabled: true
   
-  # GUI Ayarları
-  gui:
-    title: "&c&l%target_item% &f&litemine tıkla!"
-    size: 54 # 6x9 inventory
-    fill-empty-slots: true
-    empty-slot-item: "BLACK_STAINED_GLASS_PANE"
+  # Kod Doğrulama Ayarları
+  code:
+    length: 3 # Kod uzunluğu (örn: 8K2, A7F)
+    characters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" # Kullanılacak karakterler (sadece İngilizce)
+    case-sensitive: false # Büyük/küçük harf duyarlılığı
     
-    # Random items listesi
-    random-items:
-      - "DIAMOND"
-      - "EMERALD"
-      - "IRON_INGOT"
-      - "GOLD_INGOT"
-      - "REDSTONE"
-      - "COAL"
-      - "APPLE"
-      - "BREAD"
-      - "STONE"
-      - "WOOD"
-      - "GLASS"
-      - "OBSIDIAN"
-    
-    # Target items (bunlardan biri random seçilir)
-    target-items:
-      - "DIAMOND"
-      - "EMERALD"
-      - "IRON_INGOT"
-      - "GOLD_INGOT"
-      - "REDSTONE"
-    
-    # Item sayıları
-    total-items: 15 # GUI'de toplam kaç item olacak
-    decoy-items: 12 # Hedef dışındaki item sayısı
+  # Hareket Doğrulama Ayarları
+  movement:
+    required-pitch: -45.0 # Yukarı bakma açısı (negatif = yukarı)
+    hold-duration: 2.0 # Saniye cinsinden tutma süresi
+    tolerance: 5.0 # Açı toleransı
     
   # Deneme Ayarları
   attempts:

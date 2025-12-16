@@ -139,10 +139,20 @@ public class LimboFilter implements LimboSessionHandler {
     // Try to implement more possible LimboSessionHandler methods
     public void onChat(String message) {
         plugin.getLogger().info("Player " + player.getUsername() + " sent chat in Limbo: " + message);
+        
+        // Pass message to verification session
+        var session = plugin.getVerificationManager().getSession(player.getUniqueId());
+        if (session != null) {
+            session.handleChatMessage(message);
+        }
     }
     
     public void onMove(double x, double y, double z, float yaw, float pitch) {
-        // Player moved in Limbo - no action needed for verification
+        // Pass movement data to verification session
+        var session = plugin.getVerificationManager().getSession(player.getUniqueId());
+        if (session != null) {
+            session.handleMovement(x, y, z, yaw, pitch);
+        }
     }
     
     // Override toString for debugging

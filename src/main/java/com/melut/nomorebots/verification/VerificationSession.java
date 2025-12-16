@@ -2,12 +2,6 @@ package com.melut.nomorebots.verification;
 
 import com.melut.nomorebots.NoMoreBotsPlugin;
 import com.velocitypowered.api.proxy.Player;
-import dev.simplix.protocolize.api.Protocolize;
-import dev.simplix.protocolize.api.inventory.Inventory;
-import dev.simplix.protocolize.api.inventory.InventoryClick;
-import dev.simplix.protocolize.api.item.ItemStack;
-import dev.simplix.protocolize.data.ItemType;
-import dev.simplix.protocolize.data.inventory.InventoryType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
@@ -16,214 +10,138 @@ import java.util.*;
 public class VerificationSession {
     private final Player player;
     private final NoMoreBotsPlugin plugin;
-    private final Inventory inventory;
-    private String targetItemName;
-    private ItemType targetItemType;
+    private String targetCode;
     private int attempts = 0;
     private int maxAttempts;
     private final Random random = new Random();
-    private boolean fallbackMode = false;
+    
+    // Verification stages
+    private VerificationStage currentStage = VerificationStage.CHAT;
+    private boolean chatCompleted = false;
+    private boolean movementCompleted = false;
+    
+    public enum VerificationStage {
+        CHAT,      // Player needs to type the code in chat
+        MOVEMENT,  // Player needs to look up
+        COMPLETED  // Both stages done
+    }
 
     public VerificationSession(Player player, NoMoreBotsPlugin plugin) {
         this.player = player;
         this.plugin = plugin;
         this.maxAttempts = plugin.getConfigManager().getMaxAttempts();
         
-        // Check if Protocolize is available
-        Inventory tempInventory = null;
-        boolean protocolizeAvailable = false;
-        try {
-            Class.forName("dev.simplix.protocolize.api.inventory.Inventory");
-            tempInventory = new Inventory(InventoryType.GENERIC_9X6);
-            protocolizeAvailable = true;
-            plugin.getLogger().info("Protocolize is available - using GUI verification");
-        } catch (ClassNotFoundException | NoClassDefFoundError e) {
-            plugin.getLogger().warn("Protocolize not found - using fallback verification");
-        }
+        // Generate random code for chat verification
+        generateTargetCode();
         
-        this.inventory = tempInventory;
-        
-        if (protocolizeAvailable && inventory != null) {
-            this.inventory.onClick(this::handleInventoryClick);
-            setupSession();
-        } else {
-            // Initialize session data for fallback mode
-            this.fallbackMode = true;
-            pickTargetItemFallback();
-            // Start fallback immediately
-            fallbackVerification();
-        }
+        // Start hybrid verification
+        startChatVerification();
     }
 
-    private void setupSession() {
-        pickTargetItem();
-        if (inventory != null) {
-            refreshGui();
-        }
-    }
-
-    private void pickTargetItem() {
-        if (fallbackMode) {
-            pickTargetItemFallback();
-            return;
-        }
+    private void generateTargetCode() {
+        // Generate random code using config settings
+        String characters = plugin.getConfigManager().getCodeCharacters();
+        int length = plugin.getConfigManager().getCodeLength();
         
-        List<String> targets = plugin.getConfigManager().getTargetItems();
-        if (targets.isEmpty()) {
-            targets = Collections.singletonList("DIAMOND");
+        StringBuilder code = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            code.append(characters.charAt(random.nextInt(characters.length())));
         }
-        String targetName = targets.get(random.nextInt(targets.size()));
-        try {
-            this.targetItemType = ItemType.valueOf(targetName.toUpperCase());
-            this.targetItemName = targetName;
-        } catch (IllegalArgumentException e) {
-            this.targetItemType = ItemType.DIAMOND;
-            this.targetItemName = "DIAMOND";
-            plugin.getLogger().warn("Invalid target item type in config: " + targetName);
-        }
+        this.targetCode = code.toString();
+        plugin.getLogger().info("Generated verification code for " + player.getUsername() + ": " + targetCode);
     }
     
-    private void pickTargetItemFallback() {
-        // Simple fallback without Protocolize classes
-        List<String> targets = plugin.getConfigManager().getTargetItems();
-        if (targets.isEmpty()) {
-            targets = Collections.singletonList("DIAMOND");
-        }
-        this.targetItemName = targets.get(random.nextInt(targets.size()));
-        // Don't set targetItemType in fallback mode
-        plugin.getLogger().info("Fallback mode: target item is " + targetItemName);
-    }
-
-    private void refreshGui() {
-        if (inventory == null) return; // No inventory to refresh
+    private void startChatVerification() {
+        currentStage = VerificationStage.CHAT;
         
-        // Clear all items from inventory
-        for (int i = 0; i < 54; i++) {
-            inventory.item(i, (ItemStack) null);
-        }
+        // Send instructions
+        player.sendMessage(Component.text("=== BOT VERIFICATION ===", NamedTextColor.RED));
+        player.sendMessage(Component.text("Step 1/2: Chat Verification", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Type in chat: " + targetCode, NamedTextColor.GREEN));
+        player.sendMessage(Component.text("(Copy and paste the code above)", NamedTextColor.GRAY));
         
-        // Update Title
-        String titleStr = plugin.getConfigManager().getGuiTitle();
-        Map<String, String> placeholders = new HashMap<>();
-        placeholders.put("target_item", targetItemName);
-        Component title = plugin.getLanguageManager().getMessage("verification.gui-title", placeholders);
-        inventory.title(title);
-
-        List<Integer> availableSlots = new ArrayList<>();
-        for (int i = 0; i < 54; i++) {
-            availableSlots.add(i);
-        }
-        Collections.shuffle(availableSlots);
-
-        // Place target item
-        int targetSlot = availableSlots.remove(0);
-        ItemStack targetItem = new ItemStack(targetItemType);
-        targetItem.displayName(Component.text(targetItemName, NamedTextColor.GREEN));
-        inventory.item(targetSlot, targetItem);
-
-        // Place random items
-        List<String> randomItems = plugin.getConfigManager().getRandomItems();
-        for (int i = 0; i < 8; i++) { // Place some random items
-             if (availableSlots.isEmpty()) break;
-             String randomItemName = randomItems.get(random.nextInt(randomItems.size()));
-             try {
-                 ItemType type = ItemType.valueOf(randomItemName.toUpperCase());
-                 if (type == targetItemType) continue; // Skip if same as target
-                 int slot = availableSlots.remove(0);
-                 ItemStack randomItem = new ItemStack(type);
-                 randomItem.displayName(Component.text(randomItemName, NamedTextColor.RED));
-                 inventory.item(slot, randomItem);
-             } catch (IllegalArgumentException ignored) {}
-        }
-    }
-
-    public void openGui() {
-        if (inventory == null) {
-            plugin.getLogger().info("No GUI inventory available for " + player.getUsername() + " - using fallback");
-            fallbackVerification();
-            return;
-        }
-        
-        try {
-            plugin.getLogger().info("Attempting to open GUI for " + player.getUsername());
-            
-            // Check if Protocolize can handle the player
-            var protocolizePlayer = Protocolize.playerProvider().player(player.getUniqueId());
-            if (protocolizePlayer == null) {
-                plugin.getLogger().error("Protocolize player is null for " + player.getUsername());
-                fallbackVerification();
-                return;
-            }
-            
-            plugin.getLogger().info("Opening inventory for " + player.getUsername());
-            protocolizePlayer.openInventory(inventory);
-            plugin.getLogger().info("Inventory opened successfully for " + player.getUsername());
-            
-        } catch (Exception e) {
-            plugin.getLogger().error("Failed to open Protocolize GUI for " + player.getUsername(), e);
-            fallbackVerification();
-        }
+        plugin.getLogger().info("Started chat verification for " + player.getUsername() + " with code: " + targetCode);
     }
     
-    private void fallbackVerification() {
-        // Fallback to chat-based verification
-        plugin.getLogger().info("Using fallback chat verification for " + player.getUsername());
+    private void startMovementVerification() {
+        currentStage = VerificationStage.MOVEMENT;
         
-        Map<String, String> placeholders = new HashMap<>();
-        placeholders.put("target_item", targetItemName);
+        // Send instructions for movement
+        player.sendMessage(Component.text("Step 2/2: Movement Verification", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Look UP (towards the sky)", NamedTextColor.GREEN));
+        player.sendMessage(Component.text("Hold your mouse upward for 2 seconds", NamedTextColor.GRAY));
         
-        player.sendMessage(plugin.getLanguageManager().getMessage("verification.chat-instruction", placeholders));
-        player.sendMessage(Component.text("Type the name of the item: " + targetItemName, NamedTextColor.YELLOW));
-        
-        // For now, let's auto-succeed for testing
-        plugin.getServer().getScheduler()
-            .buildTask(plugin, () -> {
-                plugin.getLogger().info("Auto-succeeding verification for testing");
-                plugin.getVerificationManager().handleSuccess(player);
-            })
-            .delay(java.time.Duration.ofSeconds(3))
-            .schedule();
+        plugin.getLogger().info("Started movement verification for " + player.getUsername());
     }
-
-    public void handleClick(int slot) {
-        // This method is called by VerificationManager if we manually handle clicks, 
-        // but Protocolize has its own listener. We use the internal listener.
-    }
-
-    private void handleInventoryClick(InventoryClick click) {
-        if (inventory == null) return; // No inventory to handle
+    
+    public void handleChatMessage(String message) {
+        if (currentStage != VerificationStage.CHAT) return;
         
-        click.cancelled(true); // Cancel all interactions
+        plugin.getLogger().info("Chat verification attempt by " + player.getUsername() + ": " + message);
         
-        ItemStack clickedItem = (ItemStack) click.clickedItem();
-        if (clickedItem == null || clickedItem.itemType() == ItemType.AIR) return;
-
-        if (clickedItem.itemType() == targetItemType) {
-            // Success
-            plugin.getVerificationManager().handleSuccess(player);
-            try {
-                Protocolize.playerProvider().player(player.getUniqueId()).closeInventory();
-            } catch (Exception e) {
-                plugin.getLogger().warn("Could not close inventory for " + player.getUsername());
-            }
+        String userInput = message.trim();
+        String expectedCode = targetCode;
+        
+        // Handle case sensitivity based on config
+        if (!plugin.getConfigManager().isCodeCaseSensitive()) {
+            userInput = userInput.toUpperCase();
+            expectedCode = expectedCode.toUpperCase();
+        }
+        
+        if (userInput.equals(expectedCode)) {
+            // Chat verification successful
+            chatCompleted = true;
+            player.sendMessage(Component.text("✓ Chat verification successful!", NamedTextColor.GREEN));
+            
+            // Move to movement verification
+            startMovementVerification();
         } else {
-            // Fail
+            // Wrong code
             attempts++;
             int remaining = maxAttempts - attempts;
-            plugin.getVerificationManager().handleFail(player, remaining);
             
             if (remaining > 0) {
-                // Shuffle items again
-                pickTargetItem(); // Pick new target or keep same? Usually good to shuffle.
-                refreshGui();
-                openGui(); // Re-open to update title/items properly if needed
+                player.sendMessage(Component.text("✗ Wrong code! Try again: " + targetCode, NamedTextColor.RED));
+                player.sendMessage(Component.text("Attempts remaining: " + remaining, NamedTextColor.YELLOW));
             } else {
-                try {
-                    Protocolize.playerProvider().player(player.getUniqueId()).closeInventory();
-                } catch (Exception e) {
-                    plugin.getLogger().warn("Could not close inventory for " + player.getUsername());
-                }
+                // Failed verification
+                plugin.getVerificationManager().handleFail(player, 0);
             }
         }
     }
+    
+    public void handleMovement(double x, double y, double z, float yaw, float pitch) {
+        if (currentStage != VerificationStage.MOVEMENT) return;
+        
+        // Check if player is looking up based on config settings
+        float requiredPitch = plugin.getConfigManager().getRequiredPitch();
+        float tolerance = (float) plugin.getConfigManager().getMovementTolerance();
+        
+        // Pitch ranges from -90 (straight up) to 90 (straight down)
+        if (pitch < requiredPitch + tolerance) { // Looking up enough
+            if (!movementCompleted) {
+                movementCompleted = true;
+                player.sendMessage(Component.text("✓ Movement verification successful!", NamedTextColor.GREEN));
+                
+                // Complete verification
+                currentStage = VerificationStage.COMPLETED;
+                
+                // Schedule success after a brief delay
+                plugin.getServer().getScheduler()
+                    .buildTask(plugin, () -> {
+                        player.sendMessage(Component.text("=== VERIFICATION COMPLETE ===", NamedTextColor.GREEN));
+                        player.sendMessage(Component.text("Welcome to the server!", NamedTextColor.AQUA));
+                        plugin.getVerificationManager().handleSuccess(player);
+                    })
+                    .delay(java.time.Duration.ofMillis(500))
+                    .schedule();
+            }
+        }
+    }
+    
+    // Getters
+    public boolean isChatCompleted() { return chatCompleted; }
+    public boolean isMovementCompleted() { return movementCompleted; }
+    public VerificationStage getCurrentStage() { return currentStage; }
+    public String getTargetCode() { return targetCode; }
 }

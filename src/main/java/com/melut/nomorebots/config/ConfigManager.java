@@ -75,29 +75,29 @@ public class ConfigManager {
         return rootNode.node("limbo", "brand-name").getString("&6NoMoreBots &7Verification");
     }
 
-    // Verification settings
-    public String getGuiTitle() {
-        return rootNode.node("verification", "gui", "title").getString("&c&l%target_item% &f&litemine tıkla!");
+    // Verification settings - Chat + Movement Hybrid
+    public int getCodeLength() {
+        return rootNode.node("verification", "code", "length").getInt(3);
     }
     
-    public int getGuiSize() {
-        return rootNode.node("verification", "gui", "size").getInt(54);
+    public String getCodeCharacters() {
+        return rootNode.node("verification", "code", "characters").getString("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
     }
     
-    public List<String> getRandomItems() {
-        try {
-             return rootNode.node("verification", "gui", "random-items").getList(String.class);
-        } catch (Exception e) {
-            return List.of("DIAMOND", "EMERALD");
-        }
+    public boolean isCodeCaseSensitive() {
+        return rootNode.node("verification", "code", "case-sensitive").getBoolean(false);
     }
     
-    public List<String> getTargetItems() {
-        try {
-            return rootNode.node("verification", "gui", "target-items").getList(String.class);
-        } catch (Exception e) {
-            return List.of("DIAMOND", "EMERALD");
-        }
+    public float getRequiredPitch() {
+        return (float) rootNode.node("verification", "movement", "required-pitch").getDouble(-45.0);
+    }
+    
+    public double getMovementHoldDuration() {
+        return rootNode.node("verification", "movement", "hold-duration").getDouble(2.0);
+    }
+    
+    public double getMovementTolerance() {
+        return rootNode.node("verification", "movement", "tolerance").getDouble(5.0);
     }
 
     public int getMaxAttempts() {
