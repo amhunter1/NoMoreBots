@@ -66,66 +66,34 @@ public class PlayerConnectionHandler {
                 return;
             }
 
-            // Check if verified
-            plugin.getDatabaseManager().getPlayerData(player.getUniqueId()).thenAccept(optData -> {
-                if (optData.isPresent()) {
-                    PlayerData data = optData.get();
-                    if (!data.isVerified() && !data.isBypassGranted()) {
-                        // Not verified, send to Limbo
-                        // Cancelling the event and using LimboManager to spawn player
-                        // NOTE: ServerPreConnectEvent expectation is that we set the target server.
-                        // But Limbo isn't a RegisteredServer usually.
-                        // LimboAPI has its own way.
-                        // If we use spawnPlayer, it handles the connection.
-                        
-                        // BUT, we cannot block the thread here easily if it's async-ish, 
-                        // though PreConnect is synchronous usually.
-                        // However, we are in a callback.
-                        // Wait, 'thenAccept' is async. We can't use it like this for PreConnectEvent effectively if we want to block NOW.
-                        // We should have loaded data in LoginEvent (which we did and cached).
-                    }
-                }
-            });
+            plugin.getLogger().info("Player " + player.getUsername() + " attempting initial server connect");
             
-            // Using cached data
+            // Check cached data (should be available from LoginEvent)
             Optional<PlayerData> optData = plugin.getDatabaseManager().getCachedPlayerData(player.getUniqueId());
-            if (optData.isPresent()) {
-                PlayerData data = optData.get();
-                if (!data.isVerified() && !data.isBypassGranted()) {
-                    // Send to limbo
-                    // We set the result to denied? No, that kicks them.
-                    // We can't redirect to "Limbo" as a RegisteredServer if it's virtual.
-                    // LimboAPI documentation says: "Spawn player in Limbo"
-                    
-                    // If we spawn them in Limbo, we should probably cancel the event?
-                    // Or let them connect to a dummy server?
-                    // Ideally, we redirect the connection request to the virtual host handled by Limbo.
-                    
-                    // Actually, typical pattern:
-                    // event.setResult(ServerPreConnectEvent.ServerResult.denied());
-                    // plugin.getLimboManager().sendToLimbo(player);
-                    
-                    // BUT if we deny, they might get disconnected.
-                    // Let's see how LimboAPI works. usually `limbo.spawnPlayer(player)` takes over the connection.
-                    // So we should probably let the event proceed to "nowhere" or cancel it if Limbo takes over?
-                    // If we cancel, they disconnect.
-                    
-                    // Strategy:
-                    // Set result to allowed but redirect logic?
-                    // LimboAPI usually requires the player to be connected.
-                    // But here they are PRE-connecting.
-                    
-                    // Correct approach for Velocity with LimboAPI often involves:
-                    // On ServerPreConnect, if we want Limbo, we spawn them and cancel the event or something?
-                    // Actually, `spawnPlayer` effectively connects them.
-                    
-                    // Let's try:
-                    event.setResult(ServerPreConnectEvent.ServerResult.denied()); 
-                    // This prevents connecting to the default server (e.g. lobby).
-                    // Then we spawn them in Limbo immediately.
-                    
-                    plugin.getLimboManager().sendToLimbo(player);
-                }
+            if (!optData.isPresent()) {
+                plugin.getLogger().warn("No cached data for " + player.getUsername() + " - allowing connection");
+                return; // Allow normal connection if no data
+            }
+            
+            PlayerData data = optData.get();
+            plugin.getLogger().info("Player " + player.getUsername() + " verified: " + data.isVerified() + ", bypass: " + data.isBypassGranted());
+            
+            if (!data.isVerified() && !data.isBypassGranted()) {
+                plugin.getLogger().info("Sending " + player.getUsername() + " to Limbo for verification");
+                
+                // Deny the normal server connection
+                event.setResult(ServerPreConnectEvent.ServerResult.denied());
+                
+                // Send to Limbo after a short delay
+                plugin.getServer().getScheduler()
+                    .buildTask(plugin, () -> {
+                        plugin.getLogger().info("Executing Limbo spawn for " + player.getUsername());
+                        plugin.getLimboManager().sendToLimbo(player);
+                    })
+                    .delay(java.time.Duration.ofMillis(100))
+                    .schedule();
+            } else {
+                plugin.getLogger().info("Player " + player.getUsername() + " is verified or has bypass - allowing normal connection");
             }
         }
     }
