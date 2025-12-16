@@ -1,0 +1,111 @@
+# NoMoreBots Plugin Konfigürasyon
+version: 1.0
+
+# Genel Ayarlar
+general:
+  language: "tr" # Desteklenen: tr, en
+  debug: false
+  plugin-prefix: "&8[&6NoMoreBots&8] "
+
+# Veritabanı Ayarları
+database:
+  type: "sqlite" # sqlite, mysql
+  sqlite:
+    file: "nomorebots.db"
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "nomorebots"
+    username: "root"
+    password: "password"
+    connection-pool-size: 5
+
+# Limbo Sunucu Ayarları
+limbo:
+  enabled: true
+  host: "127.0.0.1"
+  port: 25566
+  auto-start: true
+  max-players: 100
+  brand-name: "&6NoMoreBots &7Verification"
+  
+# Bot Doğrulama Sistemi
+verification:
+  enabled: true
+  
+  # GUI Ayarları
+  gui:
+    title: "&c&l%target_item% &f&litemine tıkla!"
+    size: 54 # 6x9 inventory
+    fill-empty-slots: true
+    empty-slot-item: "BLACK_STAINED_GLASS_PANE"
+    
+    # Random items listesi
+    random-items:
+      - "DIAMOND"
+      - "EMERALD"
+      - "IRON_INGOT"
+      - "GOLD_INGOT"
+      - "REDSTONE"
+      - "COAL"
+      - "APPLE"
+      - "BREAD"
+      - "STONE"
+      - "WOOD"
+      - "GLASS"
+      - "OBSIDIAN"
+    
+    # Target items (bunlardan biri random seçilir)
+    target-items:
+      - "DIAMOND"
+      - "EMERALD"
+      - "IRON_INGOT"
+      - "GOLD_INGOT"
+      - "REDSTONE"
+    
+    # Item sayıları
+    total-items: 15 # GUI'de toplam kaç item olacak
+    decoy-items: 12 # Hedef dışındaki item sayısı
+    
+  # Deneme Ayarları
+  attempts:
+    max-attempts: 3
+    reset-on-success: true
+    
+  # Timeout Ayarları
+  timeout:
+    duration: 600 # saniye (10 dakika)
+    persistent: true # Sunucu yeniden başladığında korunur
+    
+  # Başarı Ayarları
+  success:
+    target-server: "lobby" # Başarılı doğrulama sonrası gidilecek sunucu
+    remember-duration: 86400 # 24 saat (saniye)
+    
+# Bypass Sistemi
+bypass:
+  permission: "nomorebots.bypass"
+  ip-whitelist:
+    - "127.0.0.1"
+    - "localhost"
+  enabled: true
+  
+# Admin Komutları
+commands:
+  admin-permission: "nomorebots.admin"
+  aliases:
+    - "nmb"
+    - "botcheck"
+    
+# Performans Ayarları
+performance:
+  async-database: true
+  cleanup-interval: 3600 # saniye
+  max-sessions: 500
+  session-timeout: 300 # saniye
+  
+# Güvenlik Ayarları
+security:
+  max-verification-time: 120 # saniye
+  anti-spam-delay: 1000 # milisaniye
+  log-attempts: true

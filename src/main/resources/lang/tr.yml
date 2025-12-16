@@ -1,0 +1,36 @@
+messages:
+  prefix: "&8[&6NoMoreBots&8] "
+  
+  verification:
+    required: "&cBot doğrulaması gerekli! Lütfen bekleyin..."
+    gui-title: "&c&l%target_item% &f&litemine tıklayın!"
+    click-target: "&eDoğru item: &f%item%"
+    wrong-item: "&cYanlış item seçtiniz! Kalan deneme: &e%attempts%"
+    success: "&aBot doğrulaması başarılı! Ana sunucuya yönlendiriliyorsunuz..."
+    failed: "&c3 kere yanlış deneme yaptınız!"
+    timeout: "&cBot doğrulaması başarısız! &e%time% &cdakika sonra tekrar deneyebilirsiniz."
+    already-verified: "&aZaten bot doğrulamasından geçmişsiniz!"
+    session-expired: "&cDoğrulama süresi doldu! Tekrar deneyin."
+    
+  admin:
+    reload-success: "&aKonfigürasyon başarıyla yeniden yüklendi!"
+    reload-failed: "&cKonfigürasyon yeniden yüklenirken hata oluştu!"
+    player-verified: "&a%player% oyuncusu manuel olarak doğrulandı!"
+    player-reset: "&a%player% oyuncusunun doğrulama durumu sıfırlandı!"
+    player-timeout: "&a%player% oyuncusuna %duration% saniyelik timeout verildi!"
+    player-not-found: "&cBelirtilen oyuncu bulunamadı!"
+    bypass-added: "&a%player% oyuncusuna bypass yetkisi verildi!"
+    bypass-removed: "&a%player% oyuncusundan bypass yetkisi kaldırıldı!"
+    
+  stats:
+    header: "&6=== NoMoreBots İstatistikleri ==="
+    total-players: "&eTopla Oyuncu: &f%count%"
+    verified-players: "&aDoğrulanmış Oyuncular: &f%count%"
+    timeout-players: "&cTimeout'lu Oyuncular: &f%count%"
+    active-sessions: "&bAktif Oturumlar: &f%count%"
+    
+  errors:
+    no-permission: "&cBu komutu kullanma yetkiniz yok!"
+    unknown-command: "&cBilinmeyen komut! &e/nomorebots help &ckullanın."
+    database-error: "&cVeritabanı hatası oluştu!"
+    limbo-error: "&cLimbo sunucu bağlantı hatası!"

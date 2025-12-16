@@ -1,0 +1,21 @@
+{
+  "id": "nomorebots",
+  "name": "NoMoreBots",
+  "version": "1.0.0",
+  "description": "Advanced bot verification plugin for Velocity using NanoLimbo",
+  "url": "https://github.com/amhunter1/NoMoreBots",
+  "authors": [
+    "melut"
+  ],
+  "dependencies": [
+    {
+      "id": "limboapi",
+      "optional": false
+    },
+    {
+      "id": "protocolize",
+      "optional": false
+    }
+  ],
+  "main": "com.melut.nomorebots.NoMoreBotsPlugin"
+}
