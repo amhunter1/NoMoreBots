@@ -22,6 +22,7 @@ public class VerificationSession {
     private int attempts = 0;
     private int maxAttempts;
     private final Random random = new Random();
+    private boolean fallbackMode = false;
 
     public VerificationSession(Player player, NoMoreBotsPlugin plugin) {
         this.player = player;
@@ -46,8 +47,9 @@ public class VerificationSession {
             this.inventory.onClick(this::handleInventoryClick);
             setupSession();
         } else {
-            // Initialize session data even in fallback mode
-            pickTargetItem();
+            // Initialize session data for fallback mode
+            this.fallbackMode = true;
+            pickTargetItemFallback();
             // Start fallback immediately
             fallbackVerification();
         }
@@ -61,6 +63,11 @@ public class VerificationSession {
     }
 
     private void pickTargetItem() {
+        if (fallbackMode) {
+            pickTargetItemFallback();
+            return;
+        }
+        
         List<String> targets = plugin.getConfigManager().getTargetItems();
         if (targets.isEmpty()) {
             targets = Collections.singletonList("DIAMOND");
@@ -74,6 +81,17 @@ public class VerificationSession {
             this.targetItemName = "DIAMOND";
             plugin.getLogger().warn("Invalid target item type in config: " + targetName);
         }
+    }
+    
+    private void pickTargetItemFallback() {
+        // Simple fallback without Protocolize classes
+        List<String> targets = plugin.getConfigManager().getTargetItems();
+        if (targets.isEmpty()) {
+            targets = Collections.singletonList("DIAMOND");
+        }
+        this.targetItemName = targets.get(random.nextInt(targets.size()));
+        // Don't set targetItemType in fallback mode
+        plugin.getLogger().info("Fallback mode: target item is " + targetItemName);
     }
 
     private void refreshGui() {
