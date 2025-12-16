@@ -2,6 +2,7 @@ package com.melut.nomorebots.limbo;
 
 import com.melut.nomorebots.NoMoreBotsPlugin;
 import com.velocitypowered.api.proxy.Player;
+import net.elytrium.limboapi.api.Limbo;
 import net.elytrium.limboapi.api.LimboSessionHandler;
 import net.elytrium.limboapi.api.player.LimboPlayer;
 import net.elytrium.limboapi.api.player.GameMode;
@@ -16,17 +17,33 @@ public class LimboFilter implements LimboSessionHandler {
         plugin.getLogger().info("LimboFilter created for player: " + player.getUsername());
     }
 
+    // Try different method signatures to find the correct one
+    public void onSpawn(Limbo server, LimboPlayer limboPlayer) {
+        plugin.getLogger().info("LimboFilter.onSpawn(Limbo, LimboPlayer) called for player: " + player.getUsername());
+        handleSpawn(limboPlayer);
+    }
+    
     public void onSpawn(LimboPlayer limboPlayer) {
+        plugin.getLogger().info("LimboFilter.onSpawn(LimboPlayer) called for player: " + player.getUsername());
+        handleSpawn(limboPlayer);
+    }
+    
+    public void onSpawn() {
         plugin.getLogger().info("LimboFilter.onSpawn() called for player: " + player.getUsername());
-        
+        handleSpawn(null);
+    }
+    
+    private void handleSpawn(LimboPlayer limboPlayer) {
         // Player joined Limbo. Open the GUI.
         plugin.getLogger().info("Player " + player.getUsername() + " spawned in Limbo!");
         
         // Set gamemode to survival for better experience
-        try {
-            limboPlayer.setGameMode(GameMode.SURVIVAL);
-        } catch (Exception e) {
-            plugin.getLogger().warn("Could not set gamemode for " + player.getUsername() + ": " + e.getMessage());
+        if (limboPlayer != null) {
+            try {
+                limboPlayer.setGameMode(GameMode.SURVIVAL);
+            } catch (Exception e) {
+                plugin.getLogger().warn("Could not set gamemode for " + player.getUsername() + ": " + e.getMessage());
+            }
         }
         
         // Send welcome message first
@@ -52,6 +69,12 @@ public class LimboFilter implements LimboSessionHandler {
         plugin.getVerificationManager().removeSession(player.getUniqueId());
     }
     
-    // Other LimboSessionHandler methods with default implementations
-    // These might be required by the interface depending on LimboAPI version
+    // Try to implement more possible LimboSessionHandler methods
+    public void onChat(String message) {
+        plugin.getLogger().info("Player " + player.getUsername() + " sent chat in Limbo: " + message);
+    }
+    
+    public void onMove(double x, double y, double z, float yaw, float pitch) {
+        // Player moved in Limbo - no action needed for verification
+    }
 }
