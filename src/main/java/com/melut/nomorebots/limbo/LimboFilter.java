@@ -10,14 +10,26 @@ import net.elytrium.limboapi.api.player.GameMode;
 public class LimboFilter implements LimboSessionHandler {
     private final NoMoreBotsPlugin plugin;
     private final Player player;
+    private boolean spawned = false;
 
     public LimboFilter(NoMoreBotsPlugin plugin, Player player) {
         this.plugin = plugin;
         this.player = player;
         plugin.getLogger().info("LimboFilter created for player: " + player.getUsername());
+        
+        // Try to start verification immediately as a fallback
+        plugin.getServer().getScheduler()
+            .buildTask(plugin, () -> {
+                if (!spawned) {
+                    plugin.getLogger().warn("No spawn callback called for " + player.getUsername() + " - using fallback");
+                    handleSpawn(null);
+                }
+            })
+            .delay(java.time.Duration.ofSeconds(2))
+            .schedule();
     }
 
-    // Try different method signatures to find the correct one
+    // Try ALL possible callback method names
     public void onSpawn(Limbo server, LimboPlayer limboPlayer) {
         plugin.getLogger().info("LimboFilter.onSpawn(Limbo, LimboPlayer) called for player: " + player.getUsername());
         handleSpawn(limboPlayer);
@@ -33,7 +45,62 @@ public class LimboFilter implements LimboSessionHandler {
         handleSpawn(null);
     }
     
+    // Try other common callback names
+    public void onConnect(Limbo server, LimboPlayer limboPlayer) {
+        plugin.getLogger().info("LimboFilter.onConnect(Limbo, LimboPlayer) called for player: " + player.getUsername());
+        handleSpawn(limboPlayer);
+    }
+    
+    public void onConnect(LimboPlayer limboPlayer) {
+        plugin.getLogger().info("LimboFilter.onConnect(LimboPlayer) called for player: " + player.getUsername());
+        handleSpawn(limboPlayer);
+    }
+    
+    public void onConnect() {
+        plugin.getLogger().info("LimboFilter.onConnect() called for player: " + player.getUsername());
+        handleSpawn(null);
+    }
+    
+    public void onJoin(Limbo server, LimboPlayer limboPlayer) {
+        plugin.getLogger().info("LimboFilter.onJoin(Limbo, LimboPlayer) called for player: " + player.getUsername());
+        handleSpawn(limboPlayer);
+    }
+    
+    public void onJoin(LimboPlayer limboPlayer) {
+        plugin.getLogger().info("LimboFilter.onJoin(LimboPlayer) called for player: " + player.getUsername());
+        handleSpawn(limboPlayer);
+    }
+    
+    public void onJoin() {
+        plugin.getLogger().info("LimboFilter.onJoin() called for player: " + player.getUsername());
+        handleSpawn(null);
+    }
+    
+    public void onPlayerConnect(Limbo server, LimboPlayer limboPlayer) {
+        plugin.getLogger().info("LimboFilter.onPlayerConnect(Limbo, LimboPlayer) called for player: " + player.getUsername());
+        handleSpawn(limboPlayer);
+    }
+    
+    public void onPlayerJoin(LimboPlayer limboPlayer) {
+        plugin.getLogger().info("LimboFilter.onPlayerJoin(LimboPlayer) called for player: " + player.getUsername());
+        handleSpawn(limboPlayer);
+    }
+    
+    public void onSessionStart(Limbo server, LimboPlayer limboPlayer) {
+        plugin.getLogger().info("LimboFilter.onSessionStart(Limbo, LimboPlayer) called for player: " + player.getUsername());
+        handleSpawn(limboPlayer);
+    }
+    
+    // Try generic handler methods
+    public void handle(Limbo server, LimboPlayer limboPlayer) {
+        plugin.getLogger().info("LimboFilter.handle(Limbo, LimboPlayer) called for player: " + player.getUsername());
+        handleSpawn(limboPlayer);
+    }
+    
     private void handleSpawn(LimboPlayer limboPlayer) {
+        if (spawned) return; // Prevent double execution
+        spawned = true;
+        
         // Player joined Limbo. Open the GUI.
         plugin.getLogger().info("Player " + player.getUsername() + " spawned in Limbo!");
         
@@ -76,5 +143,11 @@ public class LimboFilter implements LimboSessionHandler {
     
     public void onMove(double x, double y, double z, float yaw, float pitch) {
         // Player moved in Limbo - no action needed for verification
+    }
+    
+    // Override toString for debugging
+    @Override
+    public String toString() {
+        return "LimboFilter{player=" + player.getUsername() + ", spawned=" + spawned + "}";
     }
 }
