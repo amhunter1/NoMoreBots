@@ -1,0 +1,11 @@
+com\melut\nomorebots\config\ConfigManager.class
+com\melut\nomorebots\verification\VerificationManager.class
+com\melut\nomorebots\commands\AdminCommands.class
+com\melut\nomorebots\config\LanguageManager.class
+com\melut\nomorebots\limbo\LimboManager.class
+com\melut\nomorebots\NoMoreBotsPlugin.class
+com\melut\nomorebots\verification\VerificationSession.class
+com\melut\nomorebots\database\DatabaseManager.class
+com\melut\nomorebots\events\PlayerConnectionHandler.class
+com\melut\nomorebots\database\PlayerData.class
+com\melut\nomorebots\limbo\LimboFilter.class

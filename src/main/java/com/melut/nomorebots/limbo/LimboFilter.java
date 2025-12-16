@@ -14,7 +14,6 @@ public class LimboFilter implements LimboSessionHandler {
         this.player = player;
     }
 
-    @Override
     public void onSpawn(LimboPlayer limboPlayer) {
         // Player joined Limbo. Open the GUI.
         plugin.getVerificationManager().startVerification(player);

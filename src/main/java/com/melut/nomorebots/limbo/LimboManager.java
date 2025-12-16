@@ -18,7 +18,7 @@ public class LimboManager {
     }
 
     public void sendToLimbo(Player player) {
-        Limbo limbo = limboFactory.createLimbo(player.getVirtualHost().orElse(null));
+        Limbo limbo = limboFactory.createLimbo(null);
         limbo.spawnPlayer(player, new LimboFilter(plugin, player));
     }
 }

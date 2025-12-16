@@ -54,7 +54,10 @@ public class VerificationSession {
     }
 
     private void refreshGui() {
-        inventory.clear();
+        // Clear all items from inventory
+        for (int i = 0; i < 54; i++) {
+            inventory.item(i, (ItemStack) null);
+        }
         
         // Update Title
         String titleStr = plugin.getConfigManager().getGuiTitle();
@@ -71,7 +74,9 @@ public class VerificationSession {
 
         // Place target item
         int targetSlot = availableSlots.remove(0);
-        inventory.item(targetSlot, new ItemStack(targetItemType).displayName(Component.text(targetItemName, NamedTextColor.GREEN)));
+        ItemStack targetItem = new ItemStack(targetItemType);
+        targetItem.displayName(Component.text(targetItemName, NamedTextColor.GREEN));
+        inventory.item(targetSlot, targetItem);
 
         // Place random items
         List<String> randomItems = plugin.getConfigManager().getRandomItems();
@@ -82,7 +87,9 @@ public class VerificationSession {
                  ItemType type = ItemType.valueOf(randomItemName.toUpperCase());
                  if (type == targetItemType) continue; // Skip if same as target
                  int slot = availableSlots.remove(0);
-                 inventory.item(slot, new ItemStack(type).displayName(Component.text(randomItemName, NamedTextColor.RED)));
+                 ItemStack randomItem = new ItemStack(type);
+                 randomItem.displayName(Component.text(randomItemName, NamedTextColor.RED));
+                 inventory.item(slot, randomItem);
              } catch (IllegalArgumentException ignored) {}
         }
     }
@@ -99,7 +106,7 @@ public class VerificationSession {
     private void handleInventoryClick(InventoryClick click) {
         click.cancelled(true); // Cancel all interactions
         
-        ItemStack clickedItem = click.clickedItem();
+        ItemStack clickedItem = (ItemStack) click.clickedItem();
         if (clickedItem == null || clickedItem.itemType() == ItemType.AIR) return;
 
         if (clickedItem.itemType() == targetItemType) {
