@@ -27,14 +27,35 @@ public class VerificationSession {
         this.player = player;
         this.plugin = plugin;
         this.maxAttempts = plugin.getConfigManager().getMaxAttempts();
-        this.inventory = new Inventory(InventoryType.GENERIC_9X6);
-        this.inventory.onClick(this::handleInventoryClick);
-        setupSession();
+        
+        // Check if Protocolize is available
+        Inventory tempInventory = null;
+        boolean protocolizeAvailable = false;
+        try {
+            Class.forName("dev.simplix.protocolize.api.inventory.Inventory");
+            tempInventory = new Inventory(InventoryType.GENERIC_9X6);
+            protocolizeAvailable = true;
+            plugin.getLogger().info("Protocolize is available - using GUI verification");
+        } catch (ClassNotFoundException | NoClassDefFoundError e) {
+            plugin.getLogger().warn("Protocolize not found - using fallback verification");
+        }
+        
+        this.inventory = tempInventory;
+        
+        if (protocolizeAvailable && inventory != null) {
+            this.inventory.onClick(this::handleInventoryClick);
+            setupSession();
+        } else {
+            // Start fallback immediately
+            fallbackVerification();
+        }
     }
 
     private void setupSession() {
         pickTargetItem();
-        refreshGui();
+        if (inventory != null) {
+            refreshGui();
+        }
     }
 
     private void pickTargetItem() {
@@ -54,6 +75,8 @@ public class VerificationSession {
     }
 
     private void refreshGui() {
+        if (inventory == null) return; // No inventory to refresh
+        
         // Clear all items from inventory
         for (int i = 0; i < 54; i++) {
             inventory.item(i, (ItemStack) null);
@@ -95,6 +118,12 @@ public class VerificationSession {
     }
 
     public void openGui() {
+        if (inventory == null) {
+            plugin.getLogger().info("No GUI inventory available for " + player.getUsername() + " - using fallback");
+            fallbackVerification();
+            return;
+        }
+        
         try {
             plugin.getLogger().info("Attempting to open GUI for " + player.getUsername());
             
@@ -142,6 +171,8 @@ public class VerificationSession {
     }
 
     private void handleInventoryClick(InventoryClick click) {
+        if (inventory == null) return; // No inventory to handle
+        
         click.cancelled(true); // Cancel all interactions
         
         ItemStack clickedItem = (ItemStack) click.clickedItem();
@@ -150,7 +181,11 @@ public class VerificationSession {
         if (clickedItem.itemType() == targetItemType) {
             // Success
             plugin.getVerificationManager().handleSuccess(player);
-            Protocolize.playerProvider().player(player.getUniqueId()).closeInventory();
+            try {
+                Protocolize.playerProvider().player(player.getUniqueId()).closeInventory();
+            } catch (Exception e) {
+                plugin.getLogger().warn("Could not close inventory for " + player.getUsername());
+            }
         } else {
             // Fail
             attempts++;
@@ -163,7 +198,11 @@ public class VerificationSession {
                 refreshGui();
                 openGui(); // Re-open to update title/items properly if needed
             } else {
-                 Protocolize.playerProvider().player(player.getUniqueId()).closeInventory();
+                try {
+                    Protocolize.playerProvider().player(player.getUniqueId()).closeInventory();
+                } catch (Exception e) {
+                    plugin.getLogger().warn("Could not close inventory for " + player.getUsername());
+                }
             }
         }
     }
