@@ -46,15 +46,16 @@ public class VerificationManager {
             }
         });
 
-        // Send to lobby
-        String targetServerName = plugin.getConfigManager().getTargetServer();
-        Optional<RegisteredServer> server = plugin.getServer().getServer(targetServerName);
-        if (server.isPresent()) {
-            player.createConnectionRequest(server.get()).connect();
-            player.sendMessage(plugin.getLanguageManager().getMessage("verification.success"));
-        } else {
-            player.sendMessage(Component.text("Target server not found! Contact admin."));
-        }
+        // Disconnect player with success message so they can reconnect to main server
+        player.sendMessage(plugin.getLanguageManager().getMessage("verification.reconnect"));
+        
+        // Schedule disconnect after brief delay
+        plugin.getServer().getScheduler()
+            .buildTask(plugin, () -> {
+                player.disconnect(plugin.getLanguageManager().getMessage("verification.final-success"));
+            })
+            .delay(java.time.Duration.ofSeconds(2))
+            .schedule();
     }
     
     public void handleFail(Player player, int attemptsLeft) {
@@ -62,10 +63,8 @@ public class VerificationManager {
             // Timeout
             handleTimeout(player);
         } else {
-            // Message for wrong attempt
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("attempts", String.valueOf(attemptsLeft));
-            player.sendMessage(Component.text("✗ Wrong! Attempts left: " + attemptsLeft, net.kyori.adventure.text.format.NamedTextColor.RED));
+            // Message for wrong attempt - handled in VerificationSession
+            plugin.getLogger().info("Player " + player.getUsername() + " failed attempt, " + attemptsLeft + " attempts remaining");
         }
     }
     
@@ -84,6 +83,11 @@ public class VerificationManager {
             }
         });
 
-        player.disconnect(Component.text("Verification failed! Too many attempts.", net.kyori.adventure.text.format.NamedTextColor.RED));
+        // Use language manager for timeout message
+        Map<String, String> placeholders = new HashMap<>();
+        int timeoutMinutes = plugin.getConfigManager().getTimeoutDuration() / 60;
+        placeholders.put("time", String.valueOf(timeoutMinutes));
+        
+        player.disconnect(plugin.getLanguageManager().getMessage("verification.timeout", placeholders));
     }
 }

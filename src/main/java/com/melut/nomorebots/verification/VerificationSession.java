@@ -54,11 +54,14 @@ public class VerificationSession {
     private void startChatVerification() {
         currentStage = VerificationStage.CHAT;
         
-        // Send instructions
-        player.sendMessage(Component.text("=== BOT VERIFICATION ===", NamedTextColor.RED));
-        player.sendMessage(Component.text("Step 1/2: Chat Verification", NamedTextColor.YELLOW));
-        player.sendMessage(Component.text("Type in chat: " + targetCode, NamedTextColor.GREEN));
-        player.sendMessage(Component.text("(Copy and paste the code above)", NamedTextColor.GRAY));
+        // Send instructions using language manager
+        player.sendMessage(plugin.getLanguageManager().getMessage("verification.welcome"));
+        player.sendMessage(plugin.getLanguageManager().getMessage("verification.chat-stage"));
+        
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("code", targetCode);
+        player.sendMessage(plugin.getLanguageManager().getMessage("verification.chat-instruction", placeholders));
+        player.sendMessage(plugin.getLanguageManager().getMessage("verification.chat-hint"));
         
         plugin.getLogger().info("Started chat verification for " + player.getUsername() + " with code: " + targetCode);
     }
@@ -66,10 +69,10 @@ public class VerificationSession {
     private void startMovementVerification() {
         currentStage = VerificationStage.MOVEMENT;
         
-        // Send instructions for movement
-        player.sendMessage(Component.text("Step 2/2: Movement Verification", NamedTextColor.YELLOW));
-        player.sendMessage(Component.text("Look UP (towards the sky)", NamedTextColor.GREEN));
-        player.sendMessage(Component.text("Hold your mouse upward for 2 seconds", NamedTextColor.GRAY));
+        // Send instructions for movement using language manager
+        player.sendMessage(plugin.getLanguageManager().getMessage("verification.movement-stage"));
+        player.sendMessage(plugin.getLanguageManager().getMessage("verification.movement-instruction"));
+        player.sendMessage(plugin.getLanguageManager().getMessage("verification.movement-hint"));
         
         plugin.getLogger().info("Started movement verification for " + player.getUsername());
     }

@@ -3,12 +3,30 @@ messages:
   
   verification:
     required: "&cBot doğrulaması gerekli! Lütfen bekleyin..."
-    gui-title: "&c&l%target_item% &f&litemine tıklayın!"
-    click-target: "&eDoğru item: &f%item%"
-    wrong-item: "&cYanlış item seçtiniz! Kalan deneme: &e%attempts%"
-    success: "&aBot doğrulaması başarılı! Ana sunucuya yönlendiriliyorsunuz..."
-    failed: "&c3 kere yanlış deneme yaptınız!"
-    timeout: "&cBot doğrulaması başarısız! &e%time% &cdakika sonra tekrar deneyebilirsiniz."
+    welcome: "&6=== BOT DOĞRULAMA BAŞLATILIYOR ==="
+    
+    # Chat Verification
+    chat-stage: "&eAdım 1/2: Chat Doğrulaması"
+    chat-instruction: "&aChat'e yazın: &f%code%"
+    chat-hint: "&7(Yukarıdaki kodu kopyalayıp yapıştırın)"
+    chat-success: "&a✓ Chat doğrulaması başarılı!"
+    chat-wrong: "&c✗ Yanlış kod! Tekrar deneyin: &f%code%"
+    chat-attempts: "&eKalan deneme: %attempts%"
+    
+    # Movement Verification
+    movement-stage: "&eAdım 2/2: Hareket Doğrulaması"
+    movement-instruction: "&aYUKARI BAKIN (gökyüzüne doğru)"
+    movement-hint: "&7Mouse'unuzu yukarı doğru tutun, 2 saniye bekleyin"
+    movement-success: "&a✓ Hareket doğrulaması başarılı!"
+    
+    # Final Messages
+    complete: "&a=== DOĞRULAMA TAMAMLANDI ==="
+    final-success: "&aDoğrulama başarılı! Sunucuya tekrar giriş yapın."
+    reconnect: "&eOyundan çıkıp tekrar giriş yaparak sunucuya bağlanabilirsiniz."
+    
+    # Error Messages
+    failed: "&cDoğrulama başarısız! Çok fazla yanlış deneme."
+    timeout: "&cDoğrulama süresi doldu! &e%time% &cdakika sonra tekrar deneyebilirsiniz."
     already-verified: "&aZaten bot doğrulamasından geçmişsiniz!"
     session-expired: "&cDoğrulama süresi doldu! Tekrar deneyin."
     

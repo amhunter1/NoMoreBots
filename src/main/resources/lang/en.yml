@@ -3,12 +3,30 @@ messages:
   
   verification:
     required: "&cBot verification required! Please wait..."
-    gui-title: "&c&lClick on the &f&l%target_item%!"
-    click-target: "&eTarget item: &f%item%"
-    wrong-item: "&cWrong item selected! Remaining attempts: &e%attempts%"
-    success: "&aBot verification successful! Redirecting to main server..."
-    failed: "&cYou failed 3 verification attempts!"
-    timeout: "&cBot verification failed! Try again in &e%time% &cminutes."
+    welcome: "&6=== BOT VERIFICATION STARTING ==="
+    
+    # Chat Verification
+    chat-stage: "&eStep 1/2: Chat Verification"
+    chat-instruction: "&aType in chat: &f%code%"
+    chat-hint: "&7(Copy and paste the code above)"
+    chat-success: "&a✓ Chat verification successful!"
+    chat-wrong: "&c✗ Wrong code! Try again: &f%code%"
+    chat-attempts: "&eAttempts remaining: %attempts%"
+    
+    # Movement Verification
+    movement-stage: "&eStep 2/2: Movement Verification"
+    movement-instruction: "&aLOOK UP (towards the sky)"
+    movement-hint: "&7Hold your mouse upward for 2 seconds"
+    movement-success: "&a✓ Movement verification successful!"
+    
+    # Final Messages
+    complete: "&a=== VERIFICATION COMPLETE ==="
+    final-success: "&aVerification successful! Reconnect to the server."
+    reconnect: "&eDisconnect and reconnect to join the server."
+    
+    # Error Messages
+    failed: "&cVerification failed! Too many wrong attempts."
+    timeout: "&cVerification timeout! Try again in &e%time% &cminutes."
     already-verified: "&aYou have already passed bot verification!"
     session-expired: "&cVerification session expired! Please try again."
     
