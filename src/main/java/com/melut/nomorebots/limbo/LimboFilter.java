@@ -190,23 +190,16 @@ public class LimboFilter implements LimboSessionHandler {
     }
     
     private void startPositionEnforcer() {
-        // Active position enforcer to prevent falling through world
-        // Runs every 250ms to maintain position but preserve head movement
+        // Minimal position enforcer - only for emergency situations
+        // Main movement prevention relies on onMove method to preserve head movement
         plugin.getServer().getScheduler()
             .buildTask(plugin, () -> {
                 if (limboPlayer != null && spawned) {
-                    try {
-                        // Enforce position periodically to prevent falling/glitching
-                        // This acts as a safety net against world glitches
-                        // Use neutral yaw/pitch (0,0) for position enforcement
-                        limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, 0.0f, 0.0f);
-                        plugin.getLogger().debug("Position enforced for " + player.getUsername());
-                    } catch (Exception e) {
-                        // Silently fail, player might have disconnected
-                    }
+                    // Only log that the enforcer is running - actual enforcement in onMove
+                    plugin.getLogger().debug("Position enforcer active for " + player.getUsername());
                 }
             })
-            .repeat(java.time.Duration.ofMillis(250))
+            .repeat(java.time.Duration.ofSeconds(5))
             .schedule();
     }
     
