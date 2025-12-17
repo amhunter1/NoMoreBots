@@ -30,6 +30,7 @@ public class VerificationSession {
     
     // Timeout handling
     private long lastActionTime = System.currentTimeMillis();
+    private boolean timeoutHandled = false;
     
     public enum VerificationStage {
         CHAT,      // Player needs to type the code in chat
@@ -138,12 +139,13 @@ public class VerificationSession {
     private void startTimeoutChecker() {
         plugin.getServer().getScheduler()
             .buildTask(plugin, () -> {
-                if (currentStage != VerificationStage.COMPLETED) {
+                if (currentStage != VerificationStage.COMPLETED && !timeoutHandled) {
                     long now = System.currentTimeMillis();
                     int timeoutSeconds = plugin.getConfigManager().getResponseTimeout();
                     
                     if (now - lastActionTime > timeoutSeconds * 1000L) {
                         if (plugin.getConfigManager().isKickOnTimeout()) {
+                            timeoutHandled = true; // Prevent multiple timeout handling
                             plugin.getLogger().info("Player " + player.getUsername() + " timed out during verification");
                             plugin.getVerificationManager().handleTimeout(player);
                         }

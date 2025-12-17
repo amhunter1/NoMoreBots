@@ -73,7 +73,9 @@ public class LanguageManager {
             return messageCache.get(path);
         }
 
-        String message = getMessageFromNode(rootNode, path.split("\\."));
+        // Prepend "messages." to the path if not already present
+        String fullPath = path.startsWith("messages.") ? path : "messages." + path;
+        String message = getMessageFromNode(rootNode, fullPath.split("\\."));
         if (message == null) {
             return "Missing message: " + path;
         }
