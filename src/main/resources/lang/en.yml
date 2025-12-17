@@ -29,6 +29,7 @@ messages:
     complete: "&a=== VERIFICATION COMPLETE ==="
     final-success: "&aVerification successful! Reconnect to the server."
     reconnect: "&eDisconnect and reconnect to join the server."
+    welcome-server: "&aWelcome to the server!"
     
     # Error Messages
     failed: "&cVerification failed! Too many wrong attempts."
