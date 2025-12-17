@@ -19,6 +19,12 @@ messages:
     movement-hint: "&7Hold your mouse upward for 2 seconds"
     movement-success: "&a✓ Movement verification successful!"
     
+    # Multi-direction messages
+    movement-left: "&eLook LEFT and hold for 2 seconds"
+    movement-right: "&eLook RIGHT and hold for 2 seconds"
+    movement-up: "&eLook UP and hold for 2 seconds"
+    movement-down: "&eLook DOWN and hold for 2 seconds"
+    
     # Final Messages
     complete: "&a=== VERIFICATION COMPLETE ==="
     final-success: "&aVerification successful! Reconnect to the server."
