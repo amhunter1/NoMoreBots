@@ -53,6 +53,7 @@
                                     <include>org.xerial:sqlite-jdbc</include>
                                     <include>org.slf4j:slf4j-api</include>
                                     <include>org.bstats:bstats-velocity</include>
+                                    <include>org.bstats:bstats-base</include>
                                 </includes>
                             </artifactSet>
                             <filters>

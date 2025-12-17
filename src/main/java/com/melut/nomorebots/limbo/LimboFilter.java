@@ -170,35 +170,21 @@ public class LimboFilter implements LimboSessionHandler {
         lastYaw = yaw;
         lastPitch = pitch;
         
-        // Pozisyon değişikliklerini kontrol et
+        // Pozisyon değişikliklerini kontrol et - ANLIK TELEPORT için düşük tolerance
         double deltaX = Math.abs(x - SPAWN_X);
         double deltaZ = Math.abs(z - SPAWN_Z);
         double deltaY = Math.abs(y - SPAWN_Y);
         
-        // Tolerance değerleri arttırıldı - artık altımızda katı platform var
-        // Bu sayede sürekli teleport gerekmiyor, sadece gerçek hareket girişimlerinde müdahale et
-        boolean needsTeleport = false;
-        
-        // Horizontal movement check (X/Z plane) - daha esnek tolerance
-        if (deltaX > 0.3 || deltaZ > 0.3) {
-            needsTeleport = true;
-        }
-        
-        // Vertical movement check - platform sayesinde düşme riski yok
-        // Sadece çok büyük Y değişikliklerinde müdahale et (jump attempt veya hack)
-        if (deltaY > 1.5) {
-            needsTeleport = true;
-        }
-        
-        // Sadece gerçekten gerekli olduğunda teleport et
-        if (needsTeleport && limboPlayer != null) {
-            try {
-                // Sadece pozisyonu düzelt, kafa hareketini KORU
-                limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, yaw, pitch);
-                plugin.getLogger().debug("Significant movement blocked for " + player.getUsername() +
-                    " (delta: x=" + deltaX + ", y=" + deltaY + ", z=" + deltaZ + ")");
-            } catch (Exception e) {
-                plugin.getLogger().warn("Could not teleport " + player.getUsername() + " back to spawn", e);
+        // Çok düşük tolerance - herhangi bir hareket girişiminde ANLIK teleport
+        // Göz yormaması için hızlı ve keskin müdahale
+        if (deltaX > 0.02 || deltaZ > 0.02 || deltaY > 0.05) {
+            if (limboPlayer != null) {
+                try {
+                    // ANLIK teleport - kafa hareketini KORU
+                    limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, yaw, pitch);
+                } catch (Exception e) {
+                    plugin.getLogger().warn("Could not teleport " + player.getUsername() + " back to spawn", e);
+                }
             }
         }
         
@@ -211,27 +197,20 @@ public class LimboFilter implements LimboSessionHandler {
     }
     
     private void startPositionEnforcer() {
-        // Position enforcer - artık daha az sıklıkla çalışır çünkü altımızda katı platform var
-        // Sadece gerçekten gerekli durumlarda pozisyonu düzeltir
+        // Position enforcer - ANLIK RESPONSE için sık çalışır
+        // Backup sistem olarak 200ms'de bir pozisyonu garantiler
         plugin.getServer().getScheduler()
             .buildTask(plugin, () -> {
                 if (limboPlayer != null && spawned) {
                     try {
-                        // Mevcut pozisyonu kontrol et
-                        // Not: Bu method LimboAPI'dan pozisyon alabilir, eğer mevcut değilse atla
-                        
-                        // Sadece çok büyük sapmalarda düzeltme yap
-                        // Platform sayesinde sürekli teleport gerekmiyor
-                        
-                        // Kafa hareketini koruyarak minimal müdahale
-                        // Bu method artık daha az agresif - sadece backup olarak çalışır
+                        // ANLIK pozisyon düzeltme - kafa hareketini koru
                         limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, lastYaw, lastPitch);
                     } catch (Exception e) {
                         // Silently fail, player might have disconnected
                     }
                 }
             })
-            .repeat(java.time.Duration.ofSeconds(2)) // 500ms -> 2s: Büyük performans iyileştirmesi
+            .repeat(java.time.Duration.ofMillis(200)) // 200ms - ANLIK response için sık kontrol
             .schedule();
     }
     
