@@ -2,6 +2,7 @@ package com.melut.nomorebots.config;
 
 import org.slf4j.Logger;
 import org.spongepowered.configurate.CommentedConfigurationNode;
+import org.spongepowered.configurate.serialize.SerializationException;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
 import java.io.IOException;
@@ -90,8 +91,13 @@ public class ConfigManager {
     
     // New multi-direction movement settings
     public List<String> getMovementDirections() {
-        return rootNode.node("verification", "movement", "directions").getList(String.class,
-            java.util.Arrays.asList("up:2", "left:2"));
+        try {
+            return rootNode.node("verification", "movement", "directions").getList(String.class,
+                java.util.Arrays.asList("up:2", "left:2"));
+        } catch (SerializationException e) {
+            logger.warn("Could not deserialize movement directions, using default values", e);
+            return java.util.Arrays.asList("up:2", "left:2");
+        }
     }
     
     public double getMovementTolerance() {

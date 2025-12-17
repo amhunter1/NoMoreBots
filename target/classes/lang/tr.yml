@@ -19,10 +19,17 @@ messages:
     movement-hint: "&7Mouse'unuzu yukarı doğru tutun, 2 saniye bekleyin"
     movement-success: "&a✓ Hareket doğrulaması başarılı!"
     
+    # Multi-direction messages
+    movement-left: "&eSola bakın ve 2 saniye tutun"
+    movement-right: "&eSağa bakın ve 2 saniye tutun"
+    movement-up: "&eYukarı bakın ve 2 saniye tutun"
+    movement-down: "&eAşağı bakın ve 2 saniye tutun"
+    
     # Final Messages
     complete: "&a=== DOĞRULAMA TAMAMLANDI ==="
     final-success: "&aDoğrulama başarılı! Sunucuya tekrar giriş yapın."
     reconnect: "&eOyundan çıkıp tekrar giriş yaparak sunucuya bağlanabilirsiniz."
+    welcome-server: "&aServere hoşgeldiniz!"
     
     # Error Messages
     failed: "&cDoğrulama başarısız! Çok fazla yanlış deneme."
