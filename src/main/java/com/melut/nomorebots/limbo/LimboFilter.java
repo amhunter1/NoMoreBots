@@ -11,6 +11,10 @@ public class LimboFilter implements LimboSessionHandler {
     private final NoMoreBotsPlugin plugin;
     private final Player player;
     private boolean spawned = false;
+    private LimboPlayer limboPlayer;
+    private static final double SPAWN_X = 0.5;
+    private static final double SPAWN_Y = 64.0;
+    private static final double SPAWN_Z = 0.5;
 
     public LimboFilter(NoMoreBotsPlugin plugin, Player player) {
         this.plugin = plugin;
@@ -106,10 +110,14 @@ public class LimboFilter implements LimboSessionHandler {
         
         // Set gamemode to adventure to prevent block breaking/placing and limit movement
         if (limboPlayer != null) {
+            this.limboPlayer = limboPlayer;
             try {
                 limboPlayer.setGameMode(GameMode.ADVENTURE);
                 // Try to teleport to exact spawn position to ensure no falling
-                limboPlayer.teleport(0.5, 64.0, 0.5, 0, 0);
+                limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, 0, 0);
+                
+                // Start position enforcer task
+                startPositionEnforcer();
             } catch (Exception e) {
                 plugin.getLogger().warn("Could not set gamemode/position for " + player.getUsername() + ": " + e.getMessage());
             }
@@ -150,29 +158,51 @@ public class LimboFilter implements LimboSessionHandler {
     }
     
     public void onMove(double x, double y, double z, float yaw, float pitch) {
-        // Prevent horizontal movement - keep player at spawn position (0, 64, 0)
-        // Only allow looking around (yaw/pitch changes)
-        if (Math.abs(x) > 0.1 || Math.abs(z) > 0.1 || y != 64.0) {
-            // Cancel movement by teleporting back to spawn position
-            try {
-                // Note: This might need to be implemented through LimboAPI's teleport method
-                // For now, we'll just log and pass the original spawn coordinates
-                plugin.getLogger().debug("Preventing movement for " + player.getUsername() +
-                    " from (" + x + "," + y + "," + z + ") back to spawn");
-                // Reset position to spawn
-                x = 0.0;
-                y = 64.0;
-                z = 0.0;
-            } catch (Exception e) {
-                plugin.getLogger().warn("Could not prevent movement for " + player.getUsername(), e);
+        // Prevent horizontal movement and falling - keep player at spawn position
+        // Check if player moved too far from spawn
+        double deltaX = Math.abs(x - SPAWN_X);
+        double deltaZ = Math.abs(z - SPAWN_Z);
+        double deltaY = Math.abs(y - SPAWN_Y);
+        
+        if (deltaX > 0.1 || deltaZ > 0.1 || deltaY > 0.1) {
+            // Player moved too far, teleport back to spawn
+            if (limboPlayer != null) {
+                try {
+                    limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, yaw, pitch);
+                    plugin.getLogger().debug("Teleported " + player.getUsername() + " back to spawn from (" + x + "," + y + "," + z + ")");
+                } catch (Exception e) {
+                    plugin.getLogger().warn("Could not teleport " + player.getUsername() + " back to spawn", e);
+                }
             }
+            
+            // Use spawn coordinates for verification instead of actual movement
+            x = SPAWN_X;
+            y = SPAWN_Y;
+            z = SPAWN_Z;
         }
         
-        // Pass movement data to verification session (with corrected coordinates)
+        // Pass movement data to verification session (only yaw/pitch matter for verification)
         var session = plugin.getVerificationManager().getSession(player.getUniqueId());
         if (session != null) {
             session.handleMovement(x, y, z, yaw, pitch);
         }
+    }
+    
+    private void startPositionEnforcer() {
+        // Continuously check and enforce player position every 100ms
+        plugin.getServer().getScheduler()
+            .buildTask(plugin, () -> {
+                if (limboPlayer != null && spawned) {
+                    try {
+                        // Periodically ensure player stays at spawn
+                        limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, 0, 0);
+                    } catch (Exception e) {
+                        // Silently fail, player might have disconnected
+                    }
+                }
+            })
+            .repeat(java.time.Duration.ofMillis(100))
+            .schedule();
     }
     
     // Override toString for debugging
