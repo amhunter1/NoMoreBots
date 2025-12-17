@@ -15,6 +15,7 @@ import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import org.slf4j.Logger;
+import org.bstats.velocity.Metrics;
 
 import java.nio.file.Path;
 
@@ -39,12 +40,15 @@ public class NoMoreBotsPlugin {
     private DatabaseManager databaseManager;
     private VerificationManager verificationManager;
     private LimboManager limboManager;
+    private Metrics metrics;
+    private final Metrics.Factory metricsFactory;
 
     @Inject
-    public NoMoreBotsPlugin(ProxyServer server, Logger logger, @DataDirectory Path dataDirectory) {
+    public NoMoreBotsPlugin(ProxyServer server, Logger logger, @DataDirectory Path dataDirectory, Metrics.Factory metricsFactory) {
         this.server = server;
         this.logger = logger;
         this.dataDirectory = dataDirectory;
+        this.metricsFactory = metricsFactory;
     }
 
     @Subscribe
@@ -72,6 +76,14 @@ public class NoMoreBotsPlugin {
                 server.getCommandManager().metaBuilder("nomorebots").aliases("nmb").build(),
                 new AdminCommands(this)
         );
+
+        // Initialize bStats metrics
+        try {
+            this.metrics = metricsFactory.make(this, 28400);
+            logger.info("bStats metrics initialized for NoMoreBots (ID: 28400)");
+        } catch (Exception e) {
+            logger.warn("Could not initialize bStats metrics: " + e.getMessage());
+        }
 
         logger.info("NoMoreBots loaded successfully!");
     }
