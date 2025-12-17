@@ -158,52 +158,55 @@ public class LimboFilter implements LimboSessionHandler {
     }
     
     public void onMove(double x, double y, double z, float yaw, float pitch) {
-        // Prevent horizontal movement and falling - keep player at spawn position
-        // Check if player moved too far from spawn
+        // Prevent body movement but allow smooth head movement
+        // Check if player moved significantly from spawn position
         double deltaX = Math.abs(x - SPAWN_X);
         double deltaZ = Math.abs(z - SPAWN_Z);
         double deltaY = Math.abs(y - SPAWN_Y);
         
-        if (deltaX > 0.1 || deltaZ > 0.1 || deltaY > 0.1) {
-            // Player moved too far, teleport back to spawn
+        // Only teleport if player moved more than 0.5 blocks to avoid choppy movement
+        if (deltaX > 0.5 || deltaZ > 0.5 || deltaY > 0.5) {
+            // Player moved too far, smoothly teleport back to spawn preserving head rotation
             if (limboPlayer != null) {
                 try {
                     limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, yaw, pitch);
-                    plugin.getLogger().debug("Teleported " + player.getUsername() + " back to spawn from (" + x + "," + y + "," + z + ")");
+                    plugin.getLogger().debug("Teleported " + player.getUsername() + " back to spawn - body movement detected");
                 } catch (Exception e) {
                     plugin.getLogger().warn("Could not teleport " + player.getUsername() + " back to spawn", e);
                 }
             }
             
-            // Use spawn coordinates for verification instead of actual movement
+            // Use spawn coordinates for verification
             x = SPAWN_X;
             y = SPAWN_Y;
             z = SPAWN_Z;
         }
         
-        // Pass movement data to verification session (only yaw/pitch matter for verification)
+        // Always pass movement data to verification session (yaw/pitch are important for verification)
         var session = plugin.getVerificationManager().getSession(player.getUniqueId());
         if (session != null) {
-            session.handleMovement(x, y, z, yaw, pitch);
+            session.handleMovement(SPAWN_X, SPAWN_Y, SPAWN_Z, yaw, pitch);
         }
     }
     
     private void startPositionEnforcer() {
-        // Lightweight position enforcer - only runs when needed
-        // Main movement prevention is handled in onMove method
+        // Active position enforcer to prevent falling through world
+        // Runs every 250ms to maintain position but preserve head movement
         plugin.getServer().getScheduler()
             .buildTask(plugin, () -> {
                 if (limboPlayer != null && spawned) {
                     try {
-                        // Gentle position reset without affecting head movement
-                        // This is a backup in case onMove doesn't catch everything
-                        // We don't reset yaw/pitch to allow head movement for verification
+                        // Enforce position periodically to prevent falling/glitching
+                        // This acts as a safety net against world glitches
+                        // Use neutral yaw/pitch (0,0) for position enforcement
+                        limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, 0.0f, 0.0f);
+                        plugin.getLogger().debug("Position enforced for " + player.getUsername());
                     } catch (Exception e) {
                         // Silently fail, player might have disconnected
                     }
                 }
             })
-            .repeat(java.time.Duration.ofSeconds(2))
+            .repeat(java.time.Duration.ofMillis(250))
             .schedule();
     }
     
