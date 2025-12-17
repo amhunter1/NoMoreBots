@@ -70,7 +70,8 @@ verification:
     
   # Deneme Ayarları
   attempts:
-    max-attempts: 3
+    max-attempts: 3        # Bir oturumdaki maksimum deneme (chat kodu için)
+    max-sessions: 3        # Toplam kaç kere sunucuya girip deneyebilir
     reset-on-success: true
     
   # Timeout Ayarları

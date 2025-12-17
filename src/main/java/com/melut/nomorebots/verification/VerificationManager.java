@@ -46,6 +46,9 @@ public class VerificationManager {
                 data.setVerified(true);
                 data.resetFailedAttempts();
                 
+                // Reset session attempts counter on success
+                data.resetTotalAttempts(); // Reset session attempts
+                
                 // Set cooldown based on config
                 long cooldownMillis = System.currentTimeMillis() + (plugin.getConfigManager().getCooldownDuration() * 1000L);
                 data.setVerifiedUntil(new Timestamp(cooldownMillis));

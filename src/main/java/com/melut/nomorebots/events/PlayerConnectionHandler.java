@@ -11,6 +11,7 @@ import com.velocitypowered.api.proxy.Player;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
+import java.sql.Timestamp;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -136,6 +137,25 @@ public class PlayerConnectionHandler {
                 plugin.getLogger().info("Cooldown bypass denied for " + username + " (" + playerIP + ") - " +
                     "User match: " + userMatches + ", IP match: " + ipMatches +
                     ", Track user: " + trackByUser + ", Track IP: " + trackByIP);
+            }
+            
+            // Check session attempt limit (new retry system)
+            int maxSessions = plugin.getConfigManager().getMaxSessions();
+            int sessionAttempts = data.getSessionAttempts();
+            if (sessionAttempts >= maxSessions && !data.isInCooldown()) {
+                // Player has used all their session attempts - apply timeout
+                plugin.getLogger().info("Player " + username + " has exceeded max session attempts (" + sessionAttempts + "/" + maxSessions + "), applying timeout");
+                long timeoutMillis = System.currentTimeMillis() + (plugin.getConfigManager().getTimeoutDuration() * 1000L);
+                data.setTimeoutUntil(new Timestamp(timeoutMillis));
+                plugin.getDatabaseManager().updatePlayerData(data);
+                return false; // Will be handled by timeout check in login event
+            }
+            
+            // Increment session attempts for verification needed cases
+            if (!data.isInCooldown()) {
+                data.incrementSessionAttempts();
+                plugin.getDatabaseManager().updatePlayerData(data);
+                plugin.getLogger().info("Player " + username + " session attempt " + data.getSessionAttempts() + "/" + maxSessions);
             }
         }
         

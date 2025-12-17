@@ -138,6 +138,10 @@ public class ConfigManager {
         return rootNode.node("verification", "attempts", "max-attempts").getInt(3);
     }
     
+    public int getMaxSessions() {
+        return rootNode.node("verification", "attempts", "max-sessions").getInt(3);
+    }
+    
     public int getTimeoutDuration() {
         return rootNode.node("verification", "timeout", "duration").getInt(600);
     }

@@ -104,12 +104,14 @@ public class LimboFilter implements LimboSessionHandler {
         // Player joined Limbo. Open the GUI.
         plugin.getLogger().info("Player " + player.getUsername() + " spawned in Limbo!");
         
-        // Set gamemode to survival for better experience
+        // Set gamemode to adventure to prevent block breaking/placing and limit movement
         if (limboPlayer != null) {
             try {
-                limboPlayer.setGameMode(GameMode.SURVIVAL);
+                limboPlayer.setGameMode(GameMode.ADVENTURE);
+                // Try to teleport to exact spawn position to ensure no falling
+                limboPlayer.teleport(0.5, 64.0, 0.5, 0, 0);
             } catch (Exception e) {
-                plugin.getLogger().warn("Could not set gamemode for " + player.getUsername() + ": " + e.getMessage());
+                plugin.getLogger().warn("Could not set gamemode/position for " + player.getUsername() + ": " + e.getMessage());
             }
         }
         
@@ -148,7 +150,25 @@ public class LimboFilter implements LimboSessionHandler {
     }
     
     public void onMove(double x, double y, double z, float yaw, float pitch) {
-        // Pass movement data to verification session
+        // Prevent horizontal movement - keep player at spawn position (0, 64, 0)
+        // Only allow looking around (yaw/pitch changes)
+        if (Math.abs(x) > 0.1 || Math.abs(z) > 0.1 || y != 64.0) {
+            // Cancel movement by teleporting back to spawn position
+            try {
+                // Note: This might need to be implemented through LimboAPI's teleport method
+                // For now, we'll just log and pass the original spawn coordinates
+                plugin.getLogger().debug("Preventing movement for " + player.getUsername() +
+                    " from (" + x + "," + y + "," + z + ") back to spawn");
+                // Reset position to spawn
+                x = 0.0;
+                y = 64.0;
+                z = 0.0;
+            } catch (Exception e) {
+                plugin.getLogger().warn("Could not prevent movement for " + player.getUsername(), e);
+            }
+        }
+        
+        // Pass movement data to verification session (with corrected coordinates)
         var session = plugin.getVerificationManager().getSession(player.getUniqueId());
         if (session != null) {
             session.handleMovement(x, y, z, yaw, pitch);

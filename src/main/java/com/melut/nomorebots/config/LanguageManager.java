@@ -94,12 +94,6 @@ public class LanguageManager {
 
     public Component getMessage(String path) {
         String raw = getRawMessage(path);
-        // Replace legacy colors with MiniMessage if needed, or just parse
-        // For simplicity assuming config uses & codes which MiniMessage doesn't support by default directly in standard mode usually,
-        // but often plugins convert & to § or use a serializer.
-        // Let's support standard legacy ampersands for compatibility by converting them first
-        raw = raw.replace("&", "<legacy_ampersand>"); // Hacky, better to use LegacyComponentSerializer if needed
-        // Actually, Velocity uses Adventure. Let's use LegacyComponentSerializer to deserialize if configs use '&'
         return net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(raw);
     }
     

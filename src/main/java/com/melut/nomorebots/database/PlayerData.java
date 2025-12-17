@@ -69,6 +69,18 @@ public class PlayerData {
     public void resetFailedAttempts() {
         this.failedAttempts = 0;
     }
+    
+    public void incrementSessionAttempts() {
+        this.totalAttempts++;
+    }
+    
+    public int getSessionAttempts() {
+        return totalAttempts;
+    }
+    
+    public void resetTotalAttempts() {
+        this.totalAttempts = 0;
+    }
 
     public Timestamp getTimeoutUntil() {
         return timeoutUntil;

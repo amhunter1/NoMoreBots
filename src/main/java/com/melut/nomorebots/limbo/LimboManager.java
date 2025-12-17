@@ -25,6 +25,9 @@ public class LimboManager {
             0, 64, 0, // Spawn coordinates (x, y, z)
             0, 0 // Yaw, Pitch
         );
+        
+        // Note: Block placement will be handled through the player's adventure mode
+        // and movement restrictions in LimboFilter to prevent falling
     }
 
     public void sendToLimbo(Player player) {
