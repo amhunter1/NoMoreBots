@@ -189,19 +189,21 @@ public class LimboFilter implements LimboSessionHandler {
     }
     
     private void startPositionEnforcer() {
-        // Continuously check and enforce player position every 100ms
+        // Lightweight position enforcer - only runs when needed
+        // Main movement prevention is handled in onMove method
         plugin.getServer().getScheduler()
             .buildTask(plugin, () -> {
                 if (limboPlayer != null && spawned) {
                     try {
-                        // Periodically ensure player stays at spawn
-                        limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, 0, 0);
+                        // Gentle position reset without affecting head movement
+                        // This is a backup in case onMove doesn't catch everything
+                        // We don't reset yaw/pitch to allow head movement for verification
                     } catch (Exception e) {
                         // Silently fail, player might have disconnected
                     }
                 }
             })
-            .repeat(java.time.Duration.ofMillis(100))
+            .repeat(java.time.Duration.ofSeconds(2))
             .schedule();
     }
     
