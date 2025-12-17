@@ -6,6 +6,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.*;
+import java.util.List;
 
 public class VerificationSession {
     private final Player player;
@@ -20,6 +21,16 @@ public class VerificationSession {
     private boolean chatCompleted = false;
     private boolean movementCompleted = false;
     
+    // Multi-direction movement verification
+    private List<String> movementDirections;
+    private int currentDirectionIndex = 0;
+    private long currentDirectionStartTime = 0;
+    private String currentDirection = "";
+    private int currentDirectionDuration = 0;
+    
+    // Timeout handling
+    private long lastActionTime = System.currentTimeMillis();
+    
     public enum VerificationStage {
         CHAT,      // Player needs to type the code in chat
         MOVEMENT,  // Player needs to look up
@@ -31,11 +42,17 @@ public class VerificationSession {
         this.plugin = plugin;
         this.maxAttempts = plugin.getConfigManager().getMaxAttempts();
         
+        // Load movement directions from config
+        this.movementDirections = plugin.getConfigManager().getMovementDirections();
+        
         // Generate random code for chat verification
         generateTargetCode();
         
         // Start hybrid verification
         startChatVerification();
+        
+        // Start timeout checker
+        startTimeoutChecker();
     }
 
     private void generateTargetCode() {
@@ -71,10 +88,70 @@ public class VerificationSession {
         
         // Send instructions for movement using language manager
         player.sendMessage(plugin.getLanguageManager().getMessage("verification.movement-stage"));
-        player.sendMessage(plugin.getLanguageManager().getMessage("verification.movement-instruction"));
-        player.sendMessage(plugin.getLanguageManager().getMessage("verification.movement-hint"));
         
-        plugin.getLogger().info("Started movement verification for " + player.getUsername());
+        // Start first direction
+        startNextDirection();
+        
+        plugin.getLogger().info("Started multi-direction movement verification for " + player.getUsername());
+    }
+    
+    private void startNextDirection() {
+        if (currentDirectionIndex >= movementDirections.size()) {
+            // All directions completed
+            completeMovementVerification();
+            return;
+        }
+        
+        String directionData = movementDirections.get(currentDirectionIndex);
+        String[] parts = directionData.split(":");
+        currentDirection = parts[0];
+        currentDirectionDuration = Integer.parseInt(parts[1]);
+        currentDirectionStartTime = System.currentTimeMillis();
+        lastActionTime = System.currentTimeMillis();
+        
+        // Send direction-specific message
+        String messageKey = "verification.movement-" + currentDirection;
+        player.sendMessage(plugin.getLanguageManager().getMessage(messageKey));
+        
+        plugin.getLogger().info("Direction " + (currentDirectionIndex + 1) + "/" + movementDirections.size() +
+                              ": " + currentDirection + " for " + currentDirectionDuration + "s");
+    }
+    
+    private void completeMovementVerification() {
+        movementCompleted = true;
+        player.sendMessage(plugin.getLanguageManager().getMessage("verification.movement-success"));
+        
+        // Complete verification
+        currentStage = VerificationStage.COMPLETED;
+        
+        // Schedule success after a brief delay
+        plugin.getServer().getScheduler()
+            .buildTask(plugin, () -> {
+                player.sendMessage(plugin.getLanguageManager().getMessage("verification.complete"));
+                player.sendMessage(plugin.getLanguageManager().getMessage("verification.welcome-server"));
+                plugin.getVerificationManager().handleSuccess(player);
+            })
+            .delay(java.time.Duration.ofMillis(500))
+            .schedule();
+    }
+    
+    private void startTimeoutChecker() {
+        plugin.getServer().getScheduler()
+            .buildTask(plugin, () -> {
+                if (currentStage != VerificationStage.COMPLETED) {
+                    long now = System.currentTimeMillis();
+                    int timeoutSeconds = plugin.getConfigManager().getResponseTimeout();
+                    
+                    if (now - lastActionTime > timeoutSeconds * 1000L) {
+                        if (plugin.getConfigManager().isKickOnTimeout()) {
+                            plugin.getLogger().info("Player " + player.getUsername() + " timed out during verification");
+                            plugin.getVerificationManager().handleTimeout(player);
+                        }
+                    }
+                }
+            })
+            .repeat(java.time.Duration.ofSeconds(1))
+            .schedule();
     }
     
     public void handleChatMessage(String message) {
@@ -94,7 +171,7 @@ public class VerificationSession {
         if (userInput.equals(expectedCode)) {
             // Chat verification successful
             chatCompleted = true;
-            player.sendMessage(Component.text("✓ Chat verification successful!", NamedTextColor.GREEN));
+            player.sendMessage(plugin.getLanguageManager().getMessage("verification.chat-success"));
             
             // Move to movement verification
             startMovementVerification();
@@ -104,8 +181,13 @@ public class VerificationSession {
             int remaining = maxAttempts - attempts;
             
             if (remaining > 0) {
-                player.sendMessage(Component.text("✗ Wrong code! Try again: " + targetCode, NamedTextColor.RED));
-                player.sendMessage(Component.text("Attempts remaining: " + remaining, NamedTextColor.YELLOW));
+                Map<String, String> placeholders = new HashMap<>();
+                placeholders.put("code", targetCode);
+                player.sendMessage(plugin.getLanguageManager().getMessage("verification.chat-wrong", placeholders));
+                
+                Map<String, String> attemptsPlaceholders = new HashMap<>();
+                attemptsPlaceholders.put("attempts", String.valueOf(remaining));
+                player.sendMessage(plugin.getLanguageManager().getMessage("verification.chat-attempts", attemptsPlaceholders));
             } else {
                 // Failed verification
                 plugin.getVerificationManager().handleFail(player, 0);
@@ -115,30 +197,54 @@ public class VerificationSession {
     
     public void handleMovement(double x, double y, double z, float yaw, float pitch) {
         if (currentStage != VerificationStage.MOVEMENT) return;
+        if (currentDirectionIndex >= movementDirections.size()) return;
         
-        // Check if player is looking up based on config settings
-        float requiredPitch = plugin.getConfigManager().getRequiredPitch();
-        float tolerance = (float) plugin.getConfigManager().getMovementTolerance();
+        lastActionTime = System.currentTimeMillis();
         
-        // Pitch ranges from -90 (straight up) to 90 (straight down)
-        if (pitch < requiredPitch + tolerance) { // Looking up enough
-            if (!movementCompleted) {
-                movementCompleted = true;
-                player.sendMessage(Component.text("✓ Movement verification successful!", NamedTextColor.GREEN));
+        boolean isLookingCorrectDirection = false;
+        double tolerance = plugin.getConfigManager().getMovementTolerance();
+        
+        switch (currentDirection.toLowerCase()) {
+            case "up":
+                double upPitchMin = plugin.getConfigManager().getDirectionAngle("up", "pitch-min");
+                double upPitchMax = plugin.getConfigManager().getDirectionAngle("up", "pitch-max");
+                isLookingCorrectDirection = pitch >= upPitchMin && pitch <= upPitchMax;
+                break;
                 
-                // Complete verification
-                currentStage = VerificationStage.COMPLETED;
+            case "down":
+                double downPitchMin = plugin.getConfigManager().getDirectionAngle("down", "pitch-min");
+                double downPitchMax = plugin.getConfigManager().getDirectionAngle("down", "pitch-max");
+                isLookingCorrectDirection = pitch >= downPitchMin && pitch <= downPitchMax;
+                break;
                 
-                // Schedule success after a brief delay
-                plugin.getServer().getScheduler()
-                    .buildTask(plugin, () -> {
-                        player.sendMessage(Component.text("=== VERIFICATION COMPLETE ===", NamedTextColor.GREEN));
-                        player.sendMessage(Component.text("Welcome to the server!", NamedTextColor.AQUA));
-                        plugin.getVerificationManager().handleSuccess(player);
-                    })
-                    .delay(java.time.Duration.ofMillis(500))
-                    .schedule();
+            case "left":
+                double leftYawMin = plugin.getConfigManager().getDirectionAngle("left", "yaw-min");
+                double leftYawMax = plugin.getConfigManager().getDirectionAngle("left", "yaw-max");
+                // Normalize yaw to 0-360
+                float normalizedYaw = ((yaw % 360) + 360) % 360;
+                isLookingCorrectDirection = normalizedYaw >= leftYawMin && normalizedYaw <= leftYawMax;
+                break;
+                
+            case "right":
+                double rightYawMin = plugin.getConfigManager().getDirectionAngle("right", "yaw-min");
+                double rightYawMax = plugin.getConfigManager().getDirectionAngle("right", "yaw-max");
+                // Handle negative ranges for right
+                isLookingCorrectDirection = (yaw >= rightYawMin && yaw <= rightYawMax);
+                break;
+        }
+        
+        if (isLookingCorrectDirection) {
+            long holdTime = System.currentTimeMillis() - currentDirectionStartTime;
+            long requiredHoldTime = currentDirectionDuration * 1000L;
+            
+            if (holdTime >= requiredHoldTime) {
+                // Direction completed, move to next
+                currentDirectionIndex++;
+                startNextDirection();
             }
+        } else {
+            // Reset timer if not looking in the correct direction
+            currentDirectionStartTime = System.currentTimeMillis();
         }
     }
     

@@ -5,14 +5,19 @@ import java.util.UUID;
 
 public class PlayerData {
     private final UUID uuid;
-    private final String username;
+    private String username;
     private boolean verified;
     private int totalAttempts;
     private int failedAttempts;
     private Timestamp timeoutUntil;
     private boolean bypassGranted;
+    
+    // IP-based tracking
+    private String lastIP;
+    private Timestamp verifiedUntil; // When cooldown expires
 
-    public PlayerData(UUID uuid, String username, boolean verified, int totalAttempts, int failedAttempts, Timestamp timeoutUntil, boolean bypassGranted) {
+    public PlayerData(UUID uuid, String username, boolean verified, int totalAttempts, int failedAttempts,
+                     Timestamp timeoutUntil, boolean bypassGranted, String lastIP, Timestamp verifiedUntil) {
         this.uuid = uuid;
         this.username = username;
         this.verified = verified;
@@ -20,6 +25,13 @@ public class PlayerData {
         this.failedAttempts = failedAttempts;
         this.timeoutUntil = timeoutUntil;
         this.bypassGranted = bypassGranted;
+        this.lastIP = lastIP;
+        this.verifiedUntil = verifiedUntil;
+    }
+    
+    // Backward compatibility constructor
+    public PlayerData(UUID uuid, String username, boolean verified, int totalAttempts, int failedAttempts, Timestamp timeoutUntil, boolean bypassGranted) {
+        this(uuid, username, verified, totalAttempts, failedAttempts, timeoutUntil, bypassGranted, null, null);
     }
 
     public UUID getUuid() {
@@ -76,5 +88,30 @@ public class PlayerData {
     
     public boolean isTimedOut() {
         return timeoutUntil != null && timeoutUntil.after(new Timestamp(System.currentTimeMillis()));
+    }
+    
+    // IP-based methods
+    public String getLastIP() {
+        return lastIP;
+    }
+    
+    public void setLastIP(String lastIP) {
+        this.lastIP = lastIP;
+    }
+    
+    public Timestamp getVerifiedUntil() {
+        return verifiedUntil;
+    }
+    
+    public void setVerifiedUntil(Timestamp verifiedUntil) {
+        this.verifiedUntil = verifiedUntil;
+    }
+    
+    public boolean isInCooldown() {
+        return verifiedUntil != null && verifiedUntil.after(new Timestamp(System.currentTimeMillis()));
+    }
+    
+    public void setUsername(String username) {
+        this.username = username;
     }
 }

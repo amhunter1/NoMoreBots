@@ -88,16 +88,44 @@ public class ConfigManager {
         return rootNode.node("verification", "code", "case-sensitive").getBoolean(false);
     }
     
-    public float getRequiredPitch() {
-        return (float) rootNode.node("verification", "movement", "required-pitch").getDouble(-45.0);
-    }
-    
-    public double getMovementHoldDuration() {
-        return rootNode.node("verification", "movement", "hold-duration").getDouble(2.0);
+    // New multi-direction movement settings
+    public List<String> getMovementDirections() {
+        return rootNode.node("verification", "movement", "directions").getList(String.class,
+            java.util.Arrays.asList("up:2", "left:2"));
     }
     
     public double getMovementTolerance() {
-        return rootNode.node("verification", "movement", "tolerance").getDouble(5.0);
+        return rootNode.node("verification", "movement", "tolerance").getDouble(15.0);
+    }
+    
+    public int getResponseTimeout() {
+        return rootNode.node("verification", "movement", "response-timeout").getInt(20);
+    }
+    
+    public boolean isKickOnTimeout() {
+        return rootNode.node("verification", "movement", "kick-on-timeout").getBoolean(true);
+    }
+    
+    // Direction angle settings
+    public double getDirectionAngle(String direction, String type) {
+        return rootNode.node("verification", "movement", "angles", direction, type).getDouble(0.0);
+    }
+    
+    // Legacy methods for backward compatibility
+    public float getRequiredPitch() {
+        return (float) getDirectionAngle("up", "pitch-max");
+    }
+    
+    public double getMovementHoldDuration() {
+        // Extract from first direction if exists
+        List<String> directions = getMovementDirections();
+        if (!directions.isEmpty()) {
+            String firstDir = directions.get(0);
+            if (firstDir.contains(":")) {
+                return Double.parseDouble(firstDir.split(":")[1]);
+            }
+        }
+        return 2.0;
     }
 
     public int getMaxAttempts() {
@@ -114,6 +142,19 @@ public class ConfigManager {
     
     public String getBypassPermission() {
         return rootNode.node("bypass", "permission").getString("nomorebots.bypass");
+    }
+    
+    // Cooldown system settings
+    public boolean isTrackByUser() {
+        return rootNode.node("verification", "cooldown", "track-by-user").getBoolean(true);
+    }
+    
+    public boolean isTrackByIP() {
+        return rootNode.node("verification", "cooldown", "track-by-ip").getBoolean(true);
+    }
+    
+    public int getCooldownDuration() {
+        return rootNode.node("verification", "cooldown", "duration").getInt(86400);
     }
 
     public CommentedConfigurationNode getRoot() {

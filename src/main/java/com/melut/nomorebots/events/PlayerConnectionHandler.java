@@ -50,14 +50,6 @@ public class PlayerConnectionHandler {
 
     @Subscribe(order = PostOrder.EARLY)
     public void onServerPreConnect(ServerPreConnectEvent event) {
-        // If the player is just joining the network, this event fires before they connect to any server.
-        // We want to intercept the initial connection.
-        // But WAIT, if we send them to Limbo, that's a server connection.
-        // We need to differentiate between "initial join" and "server switch".
-        
-        // Actually, if we use LimboAPI, we might just cancel the connection and spawn them in Limbo?
-        // Or we redirect them to Limbo.
-        
         if (event.getPreviousServer() == null) { // Initial Join
             Player player = event.getPlayer();
             
@@ -66,36 +58,89 @@ public class PlayerConnectionHandler {
                 return;
             }
 
-            plugin.getLogger().info("Player " + player.getUsername() + " attempting initial server connect");
+            String playerIP = player.getRemoteAddress().getAddress().getHostAddress();
+            String username = player.getUsername();
             
-            // Check cached data (should be available from LoginEvent)
-            Optional<PlayerData> optData = plugin.getDatabaseManager().getCachedPlayerData(player.getUniqueId());
-            if (!optData.isPresent()) {
-                plugin.getLogger().warn("No cached data for " + player.getUsername() + " - allowing connection");
-                return; // Allow normal connection if no data
-            }
+            plugin.getLogger().info("Player " + username + " (" + playerIP + ") attempting initial server connect");
             
-            PlayerData data = optData.get();
-            plugin.getLogger().info("Player " + player.getUsername() + " verified: " + data.isVerified() + ", bypass: " + data.isBypassGranted());
-            
-            if (!data.isVerified() && !data.isBypassGranted()) {
-                plugin.getLogger().info("Sending " + player.getUsername() + " to Limbo for verification");
+            // Check if verification is needed based on cooldown system
+            try {
+                boolean needsVerification = checkIfVerificationNeeded(player, playerIP, username);
                 
-                // Deny the normal server connection
-                event.setResult(ServerPreConnectEvent.ServerResult.denied());
-                
-                // Send to Limbo after a short delay
-                plugin.getServer().getScheduler()
-                    .buildTask(plugin, () -> {
-                        plugin.getLogger().info("Executing Limbo spawn for " + player.getUsername());
-                        plugin.getLimboManager().sendToLimbo(player);
-                    })
-                    .delay(java.time.Duration.ofMillis(100))
-                    .schedule();
-            } else {
-                plugin.getLogger().info("Player " + player.getUsername() + " is verified or has bypass - allowing normal connection");
+                if (needsVerification) {
+                    plugin.getLogger().info("Sending " + username + " to Limbo for verification");
+                    
+                    // Deny the normal server connection
+                    event.setResult(ServerPreConnectEvent.ServerResult.denied());
+                    
+                    // Send to Limbo after a short delay
+                    plugin.getServer().getScheduler()
+                        .buildTask(plugin, () -> {
+                            plugin.getLogger().info("Executing Limbo spawn for " + username);
+                            plugin.getLimboManager().sendToLimbo(player);
+                        })
+                        .delay(java.time.Duration.ofMillis(100))
+                        .schedule();
+                } else {
+                    plugin.getLogger().info("Player " + username + " is in cooldown period - allowing normal connection");
+                }
+            } catch (Exception e) {
+                plugin.getLogger().error("Error checking verification status for " + username, e);
+                // On error, allow connection to prevent blocking legitimate players
             }
         }
+    }
+    
+    private boolean checkIfVerificationNeeded(Player player, String playerIP, String username) throws Exception {
+        // Check cached data first
+        Optional<PlayerData> optData = plugin.getDatabaseManager().getCachedPlayerData(player.getUniqueId());
+        if (!optData.isPresent()) {
+            // No cached data, load from DB
+            optData = plugin.getDatabaseManager().getPlayerData(player.getUniqueId()).get();
+        }
+        
+        if (optData.isPresent()) {
+            PlayerData data = optData.get();
+            
+            // Check if player has bypass
+            if (data.isBypassGranted()) {
+                return false;
+            }
+            
+            // Check if player is in cooldown period
+            if (data.isInCooldown()) {
+                // Additional checks based on config
+                boolean trackByUser = plugin.getConfigManager().isTrackByUser();
+                boolean trackByIP = plugin.getConfigManager().isTrackByIP();
+                
+                boolean ipMatches = playerIP.equals(data.getLastIP());
+                boolean userMatches = username.equals(data.getUsername());
+                
+                if (trackByUser && trackByIP) {
+                    // Both IP and user must match
+                    if (ipMatches && userMatches) {
+                        return false; // No verification needed
+                    }
+                } else if (trackByUser && userMatches) {
+                    // Only user tracking enabled and user matches
+                    return false;
+                } else if (trackByIP && ipMatches) {
+                    // Only IP tracking enabled and IP matches
+                    return false;
+                }
+                
+                // If we reach here, either:
+                // - Same user from different IP (if tracking by user+IP)
+                // - Different user from same IP (if tracking by user+IP)
+                // - Or tracking settings don't allow bypass
+                plugin.getLogger().info("Cooldown bypass denied for " + username + " (" + playerIP + ") - " +
+                    "User match: " + userMatches + ", IP match: " + ipMatches +
+                    ", Track user: " + trackByUser + ", Track IP: " + trackByIP);
+            }
+        }
+        
+        // Default: verification needed
+        return true;
     }
 
     @Subscribe

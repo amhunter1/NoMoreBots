@@ -52,13 +52,20 @@ public class DatabaseManager {
                         "timeout_until TIMESTAMP NULL, " +
                         "remember_until TIMESTAMP NULL, " +
                         "bypass_granted BOOLEAN DEFAULT 0, " +
+                        "last_ip VARCHAR(45), " +  // IPv6 support
+                        "verified_until TIMESTAMP NULL, " + // IP + User based cooldown
                         "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                         "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                         ");";
                 stmt.execute(sql);
                 
-                // Index
+                // Indexes
                 stmt.execute("CREATE INDEX IF NOT EXISTS idx_player_uuid ON player_verification(uuid);");
+                stmt.execute("CREATE INDEX IF NOT EXISTS idx_player_ip ON player_verification(last_ip);");
+                
+                // Add new columns to existing table if not present
+                addColumnIfNotExists(stmt, "player_verification", "last_ip", "VARCHAR(45)");
+                addColumnIfNotExists(stmt, "player_verification", "verified_until", "TIMESTAMP NULL");
             }
             
             logger.info("Database initialized successfully.");
@@ -97,7 +104,9 @@ public class DatabaseManager {
                             rs.getInt("total_attempts"),
                             rs.getInt("failed_attempts"),
                             rs.getTimestamp("timeout_until"),
-                            rs.getBoolean("bypass_granted")
+                            rs.getBoolean("bypass_granted"),
+                            rs.getString("last_ip"),
+                            rs.getTimestamp("verified_until")
                     );
                     playerDataCache.put(uuid, data);
                     return Optional.of(data);
@@ -132,6 +141,8 @@ public class DatabaseManager {
                     "failed_attempts = ?, " +
                     "timeout_until = ?, " +
                     "bypass_granted = ?, " +
+                    "last_ip = ?, " +
+                    "verified_until = ?, " +
                     "updated_at = CURRENT_TIMESTAMP " +
                     "WHERE uuid = ?";
             try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
@@ -141,12 +152,58 @@ public class DatabaseManager {
                 pstmt.setInt(4, data.getFailedAttempts());
                 pstmt.setTimestamp(5, data.getTimeoutUntil());
                 pstmt.setBoolean(6, data.isBypassGranted());
-                pstmt.setString(7, data.getUuid().toString());
+                pstmt.setString(7, data.getLastIP());
+                pstmt.setTimestamp(8, data.getVerifiedUntil());
+                pstmt.setString(9, data.getUuid().toString());
                 pstmt.executeUpdate();
             } catch (SQLException e) {
                 logger.error("Error updating player data for " + data.getUuid(), e);
             }
         }, executor);
+    }
+    
+    // IP-based verification check methods
+    public CompletableFuture<Boolean> isIPVerified(String ip) {
+        return CompletableFuture.supplyAsync(() -> {
+            String sql = "SELECT verified_until FROM player_verification WHERE last_ip = ? AND verified_until > datetime('now')";
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, ip);
+                ResultSet rs = pstmt.executeQuery();
+                return rs.next();
+            } catch (SQLException e) {
+                logger.error("Error checking IP verification status for " + ip, e);
+                return false;
+            }
+        }, executor);
+    }
+    
+    public CompletableFuture<Boolean> isUserVerified(String username) {
+        return CompletableFuture.supplyAsync(() -> {
+            String sql = "SELECT verified_until FROM player_verification WHERE username = ? AND verified_until > datetime('now')";
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, username);
+                ResultSet rs = pstmt.executeQuery();
+                return rs.next();
+            } catch (SQLException e) {
+                logger.error("Error checking user verification status for " + username, e);
+                return false;
+            }
+        }, executor);
+    }
+    
+    private void addColumnIfNotExists(Statement stmt, String tableName, String columnName, String columnType) {
+        try {
+            DatabaseMetaData dbm = connection.getMetaData();
+            ResultSet columns = dbm.getColumns(null, null, tableName, columnName);
+            if (!columns.next()) {
+                String alterSql = "ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnType;
+                stmt.execute(alterSql);
+                logger.info("Added column " + columnName + " to table " + tableName);
+            }
+            columns.close();
+        } catch (SQLException e) {
+            logger.warn("Could not check/add column " + columnName + " to table " + tableName, e);
+        }
     }
     
     public void close() {

@@ -36,13 +36,26 @@ public class VerificationManager {
     public void handleSuccess(Player player) {
         removeSession(player.getUniqueId());
         
-        // Update database
+        // Get player IP
+        String playerIP = player.getRemoteAddress().getAddress().getHostAddress();
+        
+        // Update database with cooldown
         plugin.getDatabaseManager().getPlayerData(player.getUniqueId()).thenAccept(optData -> {
             if (optData.isPresent()) {
                 PlayerData data = optData.get();
                 data.setVerified(true);
                 data.resetFailedAttempts();
+                
+                // Set cooldown based on config
+                long cooldownMillis = System.currentTimeMillis() + (plugin.getConfigManager().getCooldownDuration() * 1000L);
+                data.setVerifiedUntil(new Timestamp(cooldownMillis));
+                
+                // Update IP tracking
+                data.setLastIP(playerIP);
+                data.setUsername(player.getUsername()); // Update username in case it changed
+                
                 plugin.getDatabaseManager().updatePlayerData(data);
+                plugin.getLogger().info("Player " + player.getUsername() + " (" + playerIP + ") verified successfully. Cooldown until: " + new Timestamp(cooldownMillis));
             }
         });
 

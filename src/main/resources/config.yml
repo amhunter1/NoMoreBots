@@ -41,9 +41,32 @@ verification:
     
   # Hareket Doğrulama Ayarları
   movement:
-    required-pitch: -45.0 # Yukarı bakma açısı (negatif = yukarı)
-    hold-duration: 2.0 # Saniye cinsinden tutma süresi
-    tolerance: 5.0 # Açı toleransı
+    # Çoklu yön doğrulama listesi (sırasıyla hangi yönlere bakılacak)
+    # Formatı: direction:duration örn: up:2, left:3, down:1, right:2
+    directions:
+      - "up:2"    # Yukarı 2 saniye bak
+      - "left:2"  # Sola 2 saniye bak
+    
+    # Yön açı ayarları
+    angles:
+      up:
+        pitch-min: -90.0  # Tam yukarı
+        pitch-max: -30.0  # Yukarı sayılacak minimum açı
+      down:
+        pitch-min: 30.0   # Aşağı sayılacak minimum açı
+        pitch-max: 90.0   # Tam aşağı
+      left:
+        yaw-min: 135.0    # Sol yön başlangıç
+        yaw-max: 225.0    # Sol yön bitiş
+      right:
+        yaw-min: -45.0    # Sağ yön başlangıç
+        yaw-max: 45.0     # Sağ yön bitiş
+    
+    tolerance: 15.0 # Açı toleransı
+    
+    # Timeout ayarları - oyuncu verilen sürede bakmazsa kick
+    response-timeout: 20 # Saniye (oyuncunun tepki vermesi gereken max süre)
+    kick-on-timeout: true # Süre dolduğunda kick et
     
   # Deneme Ayarları
   attempts:
@@ -59,6 +82,14 @@ verification:
   success:
     target-server: "lobby" # Başarılı doğrulama sonrası gidilecek sunucu
     remember-duration: 86400 # 24 saat (saniye)
+    
+  # Cooldown Sistemi (Kullanıcı + IP bazlı)
+  cooldown:
+    track-by-user: true  # Kullanıcı adına göre takip et
+    track-by-ip: true    # IP adresine göre takip et
+    duration: 86400      # Cooldown süresi (24 saat saniye)
+    # Eğer aynı IP farklı kullanıcı veya aynı kullanıcı farklı IP gelirse
+    # yine bot doğrulamasına yönlendirilir
     
 # Bypass Sistemi
 bypass:
