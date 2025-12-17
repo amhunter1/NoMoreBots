@@ -11,10 +11,6 @@
     {
       "id": "limboapi",
       "optional": false
-    },
-    {
-      "id": "protocolize",
-      "optional": false
     }
   ],
   "main": "com.melut.nomorebots.NoMoreBotsPlugin"

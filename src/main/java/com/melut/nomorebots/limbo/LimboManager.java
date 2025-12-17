@@ -27,8 +27,8 @@ public class LimboManager {
         );
         
         // Movement prevention and position enforcement will be handled in LimboFilter
-        // to keep players at the spawn position and prevent falling/movement
-        plugin.getLogger().info("Created limbo world with movement prevention system");
+        // with optimized teleportation to reduce performance impact
+        plugin.getLogger().info("Created limbo world with optimized movement prevention system");
     }
 
     public void sendToLimbo(Player player) {

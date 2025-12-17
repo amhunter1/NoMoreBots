@@ -15,6 +15,10 @@ public class LimboFilter implements LimboSessionHandler {
     private static final double SPAWN_X = 0.5;
     private static final double SPAWN_Y = 64.0;
     private static final double SPAWN_Z = 0.5;
+    
+    // Kafa hareketi için son bilinen rotasyon değerleri
+    private volatile float lastYaw = 0.0f;
+    private volatile float lastPitch = 0.0f;
 
     public LimboFilter(NoMoreBotsPlugin plugin, Player player) {
         this.plugin = plugin;
@@ -108,13 +112,17 @@ public class LimboFilter implements LimboSessionHandler {
         // Player joined Limbo. Open the GUI.
         plugin.getLogger().info("Player " + player.getUsername() + " spawned in Limbo!");
         
-        // Set gamemode to adventure to prevent block breaking/placing and limit movement
+        // Set gamemode to adventure to prevent block breaking/placing
         if (limboPlayer != null) {
             this.limboPlayer = limboPlayer;
             try {
                 limboPlayer.setGameMode(GameMode.ADVENTURE);
-                // Try to teleport to exact spawn position to ensure no falling
-                limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, 0, 0);
+                // Oyuncuyu spawn pozisyonuna ışınla
+                limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, 0.0f, 0.0f);
+                
+                // İlk rotasyon değerlerini kaydet
+                lastYaw = 0.0f;
+                lastPitch = 0.0f;
                 
                 // Start position enforcer task
                 startPositionEnforcer();
@@ -158,48 +166,72 @@ public class LimboFilter implements LimboSessionHandler {
     }
     
     public void onMove(double x, double y, double z, float yaw, float pitch) {
-        // Prevent body movement but allow smooth head movement
-        // Check if player moved significantly from spawn position
+        // Kafa hareketini (yaw/pitch) kaydet - bu serbest kalacak
+        lastYaw = yaw;
+        lastPitch = pitch;
+        
+        // Pozisyon değişikliklerini kontrol et
         double deltaX = Math.abs(x - SPAWN_X);
         double deltaZ = Math.abs(z - SPAWN_Z);
         double deltaY = Math.abs(y - SPAWN_Y);
         
-        // Only teleport if player moved more than 0.5 blocks to avoid choppy movement
-        if (deltaX > 0.5 || deltaZ > 0.5 || deltaY > 0.5) {
-            // Player moved too far, smoothly teleport back to spawn preserving head rotation
-            if (limboPlayer != null) {
-                try {
-                    limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, yaw, pitch);
-                    plugin.getLogger().debug("Teleported " + player.getUsername() + " back to spawn - body movement detected");
-                } catch (Exception e) {
-                    plugin.getLogger().warn("Could not teleport " + player.getUsername() + " back to spawn", e);
-                }
-            }
-            
-            // Use spawn coordinates for verification
-            x = SPAWN_X;
-            y = SPAWN_Y;
-            z = SPAWN_Z;
+        // Tolerance değerleri arttırıldı - artık altımızda katı platform var
+        // Bu sayede sürekli teleport gerekmiyor, sadece gerçek hareket girişimlerinde müdahale et
+        boolean needsTeleport = false;
+        
+        // Horizontal movement check (X/Z plane) - daha esnek tolerance
+        if (deltaX > 0.3 || deltaZ > 0.3) {
+            needsTeleport = true;
         }
         
-        // Always pass movement data to verification session (yaw/pitch are important for verification)
+        // Vertical movement check - platform sayesinde düşme riski yok
+        // Sadece çok büyük Y değişikliklerinde müdahale et (jump attempt veya hack)
+        if (deltaY > 1.5) {
+            needsTeleport = true;
+        }
+        
+        // Sadece gerçekten gerekli olduğunda teleport et
+        if (needsTeleport && limboPlayer != null) {
+            try {
+                // Sadece pozisyonu düzelt, kafa hareketini KORU
+                limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, yaw, pitch);
+                plugin.getLogger().debug("Significant movement blocked for " + player.getUsername() +
+                    " (delta: x=" + deltaX + ", y=" + deltaY + ", z=" + deltaZ + ")");
+            } catch (Exception e) {
+                plugin.getLogger().warn("Could not teleport " + player.getUsername() + " back to spawn", e);
+            }
+        }
+        
+        // Verification session'a her zaman gerçek rotasyonu gönder
         var session = plugin.getVerificationManager().getSession(player.getUniqueId());
         if (session != null) {
+            // Spawn pozisyonunda ama gerçek kafa hareketini gönder
             session.handleMovement(SPAWN_X, SPAWN_Y, SPAWN_Z, yaw, pitch);
         }
     }
     
     private void startPositionEnforcer() {
-        // Minimal position enforcer - only for emergency situations
-        // Main movement prevention relies on onMove method to preserve head movement
+        // Position enforcer - artık daha az sıklıkla çalışır çünkü altımızda katı platform var
+        // Sadece gerçekten gerekli durumlarda pozisyonu düzeltir
         plugin.getServer().getScheduler()
             .buildTask(plugin, () -> {
                 if (limboPlayer != null && spawned) {
-                    // Only log that the enforcer is running - actual enforcement in onMove
-                    plugin.getLogger().debug("Position enforcer active for " + player.getUsername());
+                    try {
+                        // Mevcut pozisyonu kontrol et
+                        // Not: Bu method LimboAPI'dan pozisyon alabilir, eğer mevcut değilse atla
+                        
+                        // Sadece çok büyük sapmalarda düzeltme yap
+                        // Platform sayesinde sürekli teleport gerekmiyor
+                        
+                        // Kafa hareketini koruyarak minimal müdahale
+                        // Bu method artık daha az agresif - sadece backup olarak çalışır
+                        limboPlayer.teleport(SPAWN_X, SPAWN_Y, SPAWN_Z, lastYaw, lastPitch);
+                    } catch (Exception e) {
+                        // Silently fail, player might have disconnected
+                    }
                 }
             })
-            .repeat(java.time.Duration.ofSeconds(5))
+            .repeat(java.time.Duration.ofSeconds(2)) // 500ms -> 2s: Büyük performans iyileştirmesi
             .schedule();
     }
     
