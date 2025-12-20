@@ -24,7 +24,7 @@ A powerful anti-bot verification plugin for Velocity proxy servers using LimboAP
 
 ## Installation
 
-1. Download the latest release from the [releases page](https://github.com/amhunter1/NoMoreBots/releases)
+1. Download the latest release from the [mosrinth](https://modrinth.com/plugin/nomorebots)
 2. Install LimboAPI on your Velocity server
 3. Place `nomorebots-1.0.0-SNAPSHOT.jar` in your Velocity plugins folder
 4. Restart your server
@@ -153,7 +153,3 @@ cooldown:
 ## Author
 
 Created by **Melut** ([@amhunter1](https://github.com/amhunter1))
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
